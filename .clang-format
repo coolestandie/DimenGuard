@@ -1,0 +1,14 @@
+BasedOnStyle: Microsoft
+AccessModifierOffset: -4
+AlignEscapedNewlines: Left
+AlignOperands: AlignAfterOperator
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortLambdasOnASingleLine: Inline
+AlwaysBreakTemplateDeclarations: Yes
+BreakBeforeBraces: Stroustrup
+ColumnLimit: 120
+IncludeBlocks: Regroup
+InsertBraces: true
+InsertNewlineAtEOF: true
+MaxEmptyLinesToKeep: 1
+SpacesBeforeTrailingComments: 2

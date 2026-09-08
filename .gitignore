@@ -1,0 +1,23 @@
+# Local planning and agent notes
+/PLAN.md
+/PROGRESS.md
+AGENTS.md
+AGENT.MD
+.agents/
+.skills/
+.codex/
+
+# Build and runtime artifacts
+/build/
+/out/
+/dist/
+/CMakeUserPresets.json
+/.local/
+/.cache/
+/.vs/
+/.idea/
+*.user
+*.db
+*.db-wal
+*.db-shm
+*.log
