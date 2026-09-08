@@ -10,6 +10,7 @@
 namespace dimenguard {
 
 class CommandHandler;
+class ProtectionListener;
 
 class DimenGuardPlugin : public endstone::Plugin {
 public:
@@ -30,6 +31,7 @@ private:
     Messenger messenger_;
     SelectionManager selections_;
     std::unique_ptr<CommandHandler> commands_;
+    std::unique_ptr<ProtectionListener> protection_;
 };
 
 }  // namespace dimenguard

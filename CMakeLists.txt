@@ -13,7 +13,7 @@ endif ()
 
 include(CTest)
 include(FetchContent)
-option(DIMENGUARD_BUILD_PLUGIN "Build the Endstone plugin" OFF)
+option(DIMENGUARD_BUILD_PLUGIN "Build the Endstone plugin" ON)
 
 if (DIMENGUARD_BUILD_PLUGIN AND UNIX)
     # Every C++ library crossing the plugin boundary must share the server's STL ABI.
@@ -69,7 +69,8 @@ if (DIMENGUARD_BUILD_PLUGIN)
     endstone_add_plugin(dimenguard
             src/plugin.cpp
             src/command/command_handler.cpp
-            src/i18n/messenger.cpp)
+            src/i18n/messenger.cpp
+            src/listener/protection_listener.cpp)
     target_include_directories(dimenguard PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
     target_link_libraries(dimenguard PRIVATE dimenguard_services)
     dimenguard_warnings(dimenguard)
