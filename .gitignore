@@ -20,4 +20,8 @@ AGENT.MD
 *.db
 *.db-wal
 *.db-shm
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
 *.log
