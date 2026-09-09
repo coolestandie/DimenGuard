@@ -17,6 +17,13 @@ inheritance, dimension-global rules, templates, groups and a backed-up schema mi
 Its new administration controls belong to a later phase; the command reference and public
 preview download below retain their existing scope.
 
+The current branch also includes unreleased [WG-2 flag semantics](docs/flag-semantics.md):
+33 registered flags, typed values, TNT/creeper/other explosion filtering, supported nonplayer
+domains, deny-spawn sets and entry/exit denial text. Read that contract for the updated flag
+commands and schema 3 recovery procedure; the reference below describes the published preview.
+WG-2 does not add piston protection or track TNT's original ignition position. Gameplay/client
+acceptance and a separately authorized deployment remain required.
+
 ## Build
 
 On Windows, install Git, Visual Studio 2022 C++ Build Tools, the C++ Clang tools component,

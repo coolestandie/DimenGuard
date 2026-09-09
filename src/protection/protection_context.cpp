@@ -3,6 +3,7 @@
 #include "dimenguard/adapter/context.h"
 #include "dimenguard/plugin.h"
 #include "dimenguard/region/coordinates.h"
+#include "dimenguard/rules/spawn_rules.h"
 
 #include <array>
 #include <stdexcept>
@@ -69,6 +70,26 @@ bool ProtectionContext::permitsDamage(const endstone::Location &location, bool p
     return !damage_flag || regions.isEnvironmentAllowed(dimension, position, *damage_flag);
 }
 
+bool ProtectionContext::allowsNonPlayerBlockChange(std::optional<endstone::Location> source,
+                                                   const endstone::Location &target)
+{
+    const auto *service = plugin_.getService();
+    if (!service) {
+        return false;
+    }
+    const auto target_dimension = targetDimension(target);
+    return service->getRegions().isNonPlayerAllowed(source ? targetDimension(*source) : target_dimension,
+                                                    source ? std::optional{blockPosition(*source)} : std::nullopt,
+                                                    target_dimension, blockPosition(target), Flag::BlockBreak);
+}
+
+bool ProtectionContext::permitsSpawn(const endstone::Location &location, std::string_view actor_id, bool mob)
+{
+    const auto *service = plugin_.getService();
+    return service && SpawnRules::isAllowed(service->getRegions(), targetDimension(location), blockPosition(location),
+                                            actor_id, mob ? SpawnSubject::Mob : SpawnSubject::Actor);
+}
+
 bool ProtectionContext::allowedAtBoth(endstone::Player &player, const endstone::Location &first,
                                       const endstone::Location &second, Flag flag)
 {
@@ -95,12 +116,18 @@ bool ProtectionContext::allowedTransition(endstone::Player &player, const endsto
         plugin_.getMessenger().deny(player, Message::NotReady);
         return false;
     }
-    if (service->getRegions().isTransitionAllowed(from_dimension, from_position, to_dimension, to_position,
-                                                  player.getUniqueId().str(),
-                                                  player.hasPermission("dimenguard.bypass"))) {
+    const auto denial = service->getRegions().getTransitionDenial(from_dimension, from_position, to_dimension,
+                                                                  to_position, player.getUniqueId().str(),
+                                                                  player.hasPermission("dimenguard.bypass"));
+    if (!denial) {
         return true;
     }
-    plugin_.getMessenger().deny(player);
+    if (denial->message) {
+        plugin_.getMessenger().denyText(player, *denial->message);
+    }
+    else {
+        plugin_.getMessenger().deny(player);
+    }
     return false;
 }
 

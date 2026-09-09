@@ -21,6 +21,7 @@ struct FlagPanelPage {
                                                                  bool can_manage = false,
                                                                  std::optional<FlagScope> scope = std::nullopt);
 [[nodiscard]] std::vector<std::string> renderFlagCatalog(Locale locale);
+[[nodiscard]] std::string displayFlagValue(const FlagValue &value);
 [[nodiscard]] std::vector<std::string> renderRegionFlags(const Region &region, Locale locale,
                                                          std::optional<Flag> selected = std::nullopt);
 

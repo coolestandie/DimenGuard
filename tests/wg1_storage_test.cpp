@@ -129,8 +129,13 @@ TEST_F(Wg1StorageTest, LegacyMigrationPreservesDataAndKeepsAStandaloneOriginalBa
     ASSERT_EQ(loaded.size(), 1);
     test::expectRegionEqual(loaded.front(), legacyRegion());
     EXPECT_EQ(scalar(path_, "PRAGMA user_version"), storage::schema_version);
+    EXPECT_EQ(scalar(path_, "SELECT COUNT(*) FROM flags WHERE type = 'state'"), 2);
+    EXPECT_EQ(scalar(path_, "SELECT COUNT(*) FROM flags WHERE value = 'inherit'"), 1);
     const auto files = backups();
     ASSERT_EQ(files.size(), 1);
+    for (const auto &entry : std::filesystem::directory_iterator(directory_)) {
+        EXPECT_EQ(entry.path().filename().string().find(".v2-backup-"), std::string::npos);
+    }
     expectLegacy(files.front());
     store.save({});
     expectLegacy(files.front());
@@ -190,6 +195,82 @@ TEST_F(Wg1StorageTest, FailedMigrationRollsBackAllDdlAndDoesNotOverwritePrevious
     EXPECT_EQ(backups().size(), 2);
     expectLegacy(first_files.front());
     EXPECT_EQ(scalar(first_files.front(), "SELECT COUNT(*) FROM flag_groups WHERE sentinel = 'keep'"), 1);
+}
+
+TEST_F(Wg1StorageTest, TypedFlagDdlFailureAlsoRollsBackNewRegionColumnsAndGroups)
+{
+    createLegacy();
+    executeRaw("ALTER TABLE flags ADD COLUMN type TEXT NOT NULL DEFAULT 'keep'");
+    EXPECT_THROW(SqliteStore{path_}, std::runtime_error);
+    expectLegacy(path_);
+    EXPECT_EQ(scalar(path_, "SELECT COUNT(*) FROM sqlite_master WHERE name = 'flag_groups'"), 0);
+    EXPECT_EQ(scalar(path_, "SELECT COUNT(*) FROM pragma_table_info('flags') WHERE name = 'value'"), 0);
+    EXPECT_EQ(scalar(path_, "SELECT COUNT(*) FROM flags WHERE type = 'keep'"), 2);
+    const auto files = backups();
+    ASSERT_EQ(files.size(), 1);
+    expectLegacy(files.front());
+}
+
+TEST_F(Wg1StorageTest, NewFlagNamesCannotLegitimizeCorruptVersionOneData)
+{
+    createLegacy();
+    for (const auto *name : {"tnt", "creeper-explosion", "other-explosion", "deny-spawn", "entry-deny-message",
+                             "exit-deny-message", "nonplayer-protection-domains"}) {
+        SCOPED_TRACE(name);
+        executeRaw("UPDATE flags SET name = '" + std::string(name) + "' WHERE name = 'build'");
+        EXPECT_THROW(SqliteStore{path_}, std::runtime_error);
+        expectLegacy(path_);
+        EXPECT_TRUE(backups().empty());
+        executeRaw("UPDATE flags SET name = 'build' WHERE name = '" + std::string(name) + "'");
+    }
+}
+
+TEST_F(Wg1StorageTest, DirectTypedMigrationRetainsEveryLegacyStateFlag)
+{
+    createLegacy();
+    executeRaw("DELETE FROM flags");
+    auto expected = legacyRegion();
+    expected.flags.clear();
+    for (const auto *name : {"build",
+                             "interact",
+                             "container-access",
+                             "pvp",
+                             "explosions",
+                             "fluid-flow",
+                             "block-form",
+                             "leaf-decay",
+                             "actor-griefing",
+                             "mob-spawning",
+                             "mob-damage",
+                             "entry",
+                             "exit",
+                             "block-break",
+                             "block-place",
+                             "use",
+                             "use-anvil",
+                             "sleep",
+                             "item-drop",
+                             "item-pickup",
+                             "send-chat",
+                             "water-flow",
+                             "lava-flow",
+                             "fall-damage",
+                             "firework-damage",
+                             "invincible"}) {
+        const auto flag = parseFlag(name);
+        ASSERT_TRUE(flag);
+        expected.flags[*flag] = FlagState::Deny;
+        executeRaw("INSERT INTO flags VALUES (7, '" + std::string(name) + "', 'deny')");
+    }
+    SqliteStore store(path_);
+    const auto loaded = store.load();
+    ASSERT_EQ(loaded.size(), 1);
+    test::expectRegionEqual(loaded.front(), expected);
+    EXPECT_EQ(scalar(path_, "SELECT COUNT(*) FROM flags WHERE type = 'state' AND value = 'deny'"), 26);
+    const auto files = backups();
+    ASSERT_EQ(files.size(), 1);
+    EXPECT_EQ(scalar(files.front(), "PRAGMA user_version"), 1);
+    EXPECT_EQ(scalar(files.front(), "SELECT COUNT(*) FROM flags WHERE state = 'deny'"), 26);
 }
 
 TEST_F(Wg1StorageTest, FailedMigrationCommitRestoresTheOriginalSchema)

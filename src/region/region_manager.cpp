@@ -113,11 +113,51 @@ bool RegionManager::isTransitionAllowed(const DimensionKey &from_dimension, cons
                                         const DimensionKey &to_dimension, const BlockPosition &to,
                                         std::string_view player_id, bool bypass) const
 {
+    return !getTransitionDenial(from_dimension, from, to_dimension, to, player_id, bypass);
+}
+
+std::optional<TransitionDenial> RegionManager::getTransitionDenial(const DimensionKey &from_dimension,
+                                                                   const BlockPosition &from,
+                                                                   const DimensionKey &to_dimension,
+                                                                   const BlockPosition &to, std::string_view player_id,
+                                                                   bool bypass) const
+{
     if (bypass || (from_dimension == to_dimension && from == to)) {
-        return true;
+        return std::nullopt;
     }
-    return TransitionPolicy::isAllowed(query(from_dimension, from), query(to_dimension, to), player_id,
+    return TransitionPolicy::getDenial(query(from_dimension, from), query(to_dimension, to), player_id,
                                        {regions_, parent_indices_});
+}
+
+std::optional<FlagValue> RegionManager::getFlagValue(const DimensionKey &dimension, const BlockPosition &position,
+                                                     Flag flag, std::optional<std::string_view> player_id) const
+{
+    return ProtectionPolicy::getFlagValue(query(dimension, position), flag,
+                                          player_id ? RegionSubject::player(*player_id) : RegionSubject::environment(),
+                                          {regions_, parent_indices_});
+}
+
+bool RegionManager::isNonPlayerAllowed(const DimensionKey &source_dimension, std::optional<BlockPosition> source,
+                                       const DimensionKey &target_dimension, const BlockPosition &target,
+                                       Flag flag) const
+{
+    if (flagScope(flag) != FlagScope::Player || flagType(flag) != FlagType::State) {
+        throw std::invalid_argument("Non-player association requires a player-action state flag");
+    }
+    if (source_dimension != target_dimension) {
+        return false;
+    }
+    auto source_regions = source ? query(source_dimension, *source) : std::vector<const Region *>{};
+    const auto target_regions = query(target_dimension, target);
+    const auto is_global = [](const Region *region) {
+        return region->kind == RegionKind::Global;
+    };
+    std::erase_if(source_regions, is_global);
+    const RegionContext context{regions_, parent_indices_};
+    const auto source_domains = ProtectionPolicy::getFlagValue(source_regions, Flag::NonPlayerProtectionDomains,
+                                                               RegionSubject::environment(), context);
+    const auto subject = RegionSubject::nonPlayer(source_regions, *source_domains->get<FlagSet>());
+    return ProtectionPolicy::isAllowed(target_regions, flag, subject, context);
 }
 
 }

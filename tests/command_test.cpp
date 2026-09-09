@@ -88,14 +88,14 @@ TEST(CommandCatalog, LogicalGrammarUsesPlayersAndNativeTailsAcceptNumericNames)
     EXPECT_EQ(helpUsage(findCommand("region rename")), "/dg region rename <region> <name>");
 }
 
-TEST(CommandCatalog, FlagStateAndLanguageChoicesMatchSupportedValues)
+TEST(CommandCatalog, FlagNamesAndLanguageChoicesMatchRegistryAndValueIsTypedByClientCatalog)
 {
     const auto &flag_command = findCommand("flag");
     ASSERT_EQ(flag_command.parameters.size(), 3);
     const auto &flags = flag_command.parameters[1];
     const auto &states = flag_command.parameters[2];
     EXPECT_EQ(flags.kind, ParameterKind::Choice);
-    EXPECT_EQ(states.kind, ParameterKind::Choice);
+    EXPECT_EQ(states.kind, ParameterKind::Message);
     EXPECT_TRUE(flag_command.parameters[0].optional);
     EXPECT_TRUE(flags.optional);
     EXPECT_TRUE(states.optional);
@@ -104,7 +104,7 @@ TEST(CommandCatalog, FlagStateAndLanguageChoicesMatchSupportedValues)
         supported_names.push_back(flagName(flag));
     }
     EXPECT_EQ(flags.choices, supported_names);
-    EXPECT_EQ(states.choices, (std::vector<std::string_view>{"inherit", "allow", "deny"}));
+    EXPECT_TRUE(states.choices.empty());
     for (const auto choice : flags.choices) {
         EXPECT_TRUE(parseFlag(choice)) << choice;
     }
@@ -112,7 +112,7 @@ TEST(CommandCatalog, FlagStateAndLanguageChoicesMatchSupportedValues)
         EXPECT_TRUE(parseState(choice)) << choice;
     }
     EXPECT_TRUE(usageFor("flag").ends_with(" [arguments: message]"));
-    EXPECT_EQ(helpUsage(flag_command), "/dg flag [region] [flag] [inherit|allow|deny]");
+    EXPECT_EQ(helpUsage(flag_command), "/dg flag [region] [flag] [value]");
 
     const auto &language = findCommand("language");
     ASSERT_EQ(language.parameters.size(), 1);
@@ -205,7 +205,8 @@ TEST(CommandNormalization, SplitsOnlyNativeMessageTails)
     EXPECT_EQ(normalize({"untrust", "123 IKyel0I"}), (std::vector<std::string>{"untrust", "123", "IKyel0I"}));
     EXPECT_FALSE(normalize({"region"}));
     EXPECT_FALSE(normalize({"region", "rename", "a b extra"}));
-    EXPECT_FALSE(normalize({"flag", "test build deny extra"}));
+    EXPECT_EQ(normalize({"flag", "test build deny extra"}),
+              (std::vector<std::string>{"flag", "test", "build", "deny extra"}));
     EXPECT_FALSE(normalize({"trust", "test a b"}));
     EXPECT_FALSE(normalize({"trust", "test \"broken"}));
     EXPECT_FALSE(normalize({"region", "list", "1", "2"}));

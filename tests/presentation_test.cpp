@@ -260,7 +260,7 @@ TEST(HelpPanel, StaysBoundedAndResetsEveryLine)
 TEST(FlagSupport, EnumeratesUniqueNamesThatRoundTripThroughParsers)
 {
     std::set<std::string_view> flags;
-    ASSERT_EQ(supportedFlags().size(), 26);
+    ASSERT_EQ(supportedFlags().size(), 33);
     for (const auto flag : supportedFlags()) {
         EXPECT_TRUE(flags.insert(flagName(flag)).second);
         EXPECT_EQ(parseFlag(flagName(flag)), flag);
@@ -290,7 +290,14 @@ TEST(FlagSupport, EnumeratesUniqueNamesThatRoundTripThroughParsers)
                                                  "lava-flow",
                                                  "fall-damage",
                                                  "firework-damage",
-                                                 "invincible"}));
+                                                 "invincible",
+                                                 "tnt",
+                                                 "creeper-explosion",
+                                                 "other-explosion",
+                                                 "deny-spawn",
+                                                 "entry-deny-message",
+                                                 "exit-deny-message",
+                                                 "nonplayer-protection-domains"}));
     std::set<std::string_view> states;
     ASSERT_EQ(supportedFlagStates().size(), 3);
     for (const auto state : supportedFlagStates()) {
@@ -305,8 +312,8 @@ TEST(FlagPresentation, CatalogPagesShowEveryFlagOnceAndLocalizedUsage)
     for (const auto locale : {Locale::English, Locale::Spanish}) {
         const auto first = renderFlagCatalogPage(locale, 1, true);
         ASSERT_TRUE(first);
-        EXPECT_EQ(first->total_count, 26);
-        EXPECT_EQ(first->page_count, 5);
+        EXPECT_EQ(first->total_count, 33);
+        EXPECT_EQ(first->page_count, 6);
         std::string text;
         for (std::size_t page_number = 1; page_number <= first->page_count; ++page_number) {
             const auto page = renderFlagCatalogPage(locale, page_number, true);
@@ -479,8 +486,11 @@ TEST(FlagPresentation, RegionQueriesShowStoredAndInheritedStatesWithoutMutation)
         EXPECT_NE(text.find(messageText(Message::FlagDefaults, locale)), text.npos);
         for (const auto flag : supportedFlags()) {
             const auto found = before.find(flag);
-            const auto state = found == before.end() ? FlagState::Inherit : found->second;
-            EXPECT_NE(text.find(std::format("{}: {}", flagName(flag), stateName(state))), text.npos);
+            const auto value = found == before.end() ? (flagType(flag) == FlagType::State
+                                                            ? std::string{"inherit"}
+                                                            : std::string(messageText(Message::FlagValueUnset, locale)))
+                                                     : displayFlagValue(found->second);
+            EXPECT_NE(text.find(std::format("{}: {}", flagName(flag), value)), text.npos);
         }
         EXPECT_EQ(region.flags, before);
     }

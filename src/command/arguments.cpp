@@ -19,7 +19,7 @@ std::optional<std::vector<std::string>> normalizeCommandArguments(std::span<cons
         return std::nullopt;
     }
     const auto tail = args.size() > prefix_size ? std::string_view(args.back()) : std::string_view{};
-    auto words = parseCommandArguments(tail, flag ? 3 : 2);
+    auto words = parseCommandArguments(tail, flag ? 3 : 2, flag);
     if (!words) {
         return std::nullopt;
     }

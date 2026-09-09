@@ -12,14 +12,25 @@ void RegionService::setPassthrough(const RegionKey &key, FlagState state)
 
 void RegionService::setFlag(const RegionKey &key, Flag flag, FlagState state)
 {
+    validateFlagValue(flag, FlagValue(state));
+    setFlagValue(key, flag, FlagValue(state));
+}
+
+void RegionService::setFlagValue(const RegionKey &key, Flag flag, std::optional<FlagValue> value)
+{
     static_cast<void>(flagName(flag));
-    static_cast<void>(stateName(state));
-    mutateRegion(key, [flag, state](Region &region) {
-        if (state == FlagState::Inherit) {
+    if (value) {
+        validateFlagValue(flag, *value);
+        if (*value == FlagState::Inherit) {
+            value.reset();
+        }
+    }
+    mutateRegion(key, [flag, &value](Region &region) {
+        if (!value) {
             region.flags.erase(flag);
         }
         else {
-            region.flags[flag] = state;
+            region.flags.insert_or_assign(flag, std::move(*value));
         }
     });
 }

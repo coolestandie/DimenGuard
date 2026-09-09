@@ -19,6 +19,7 @@ public:
     void setLocale(const endstone::Player &player, Locale locale);
     void forget(const endstone::Player &player);
     void deny(endstone::Player &player, Message message = Message::Denied);
+    void denyText(endstone::Player &player, std::string_view text);
     void sendHelp(endstone::CommandSender &sender) const;
     void sendLines(endstone::CommandSender &sender, std::span<const std::string> lines) const;
 

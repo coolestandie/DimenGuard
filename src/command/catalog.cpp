@@ -50,7 +50,7 @@ const auto &definitions()
                     true,
                     {{"region", Kind::Word, true, {}},
                      {"flag", Kind::Choice, true, choicesFor(supportedFlags(), flagName)},
-                     {"state", Kind::Choice, true, choicesFor(supportedFlagStates(), stateName)}}},
+                     {"value", Kind::Message, true, {}}}},
         CommandSpec{"trust",
                     Section::Protection,
                     Message::HelpTrust,
@@ -150,6 +150,33 @@ std::vector<CommandParameter> regionParameters()
 std::span<const CommandSpec> commandCatalog()
 {
     return definitions();
+}
+
+std::vector<CommandSpec> clientCommandCatalog()
+{
+    std::vector<CommandSpec> catalog;
+    for (const auto &command : definitions()) {
+        if (command.path != "flag") {
+            catalog.push_back(command);
+            continue;
+        }
+        auto query = command;
+        query.parameters.resize(1);
+        catalog.push_back(std::move(query));
+        for (const auto flag : supportedFlags()) {
+            auto typed = command;
+            typed.parameters[0].optional = false;
+            typed.parameters[1].optional = false;
+            typed.parameters[1].choices = {flagName(flag)};
+            const auto choices = flagValueSuggestions(flag);
+            if (!choices.empty() && (flagType(flag) == FlagType::State || flagType(flag) == FlagType::Boolean)) {
+                typed.parameters[2].kind = Kind::Choice;
+                typed.parameters[2].choices.assign(choices.begin(), choices.end());
+            }
+            catalog.push_back(std::move(typed));
+        }
+    }
+    return catalog;
 }
 
 std::string helpUsage(const CommandSpec &command)

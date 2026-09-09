@@ -64,19 +64,65 @@ bool RegionContext::isOwner(const Region &region, std::string_view player_id) co
     return false;
 }
 
+bool RegionContext::isMember(const Region &region, const RegionSubject &subject) const
+{
+    if (subject.kind == RegionSubjectKind::Player) {
+        return isMember(region, subject.player_id);
+    }
+    if (subject.kind != RegionSubjectKind::NonPlayer || region.kind == RegionKind::Global) {
+        return false;
+    }
+    for (const auto *source : subject.source_regions) {
+        if (source->kind == RegionKind::Global || source->key.dimension != region.key.dimension) {
+            continue;
+        }
+        const Region *target = &region;
+        for (std::size_t target_depth = 0; target && target_depth < maximum_region_depth;
+             ++target_depth, target = parent(*target)) {
+            const Region *current = source;
+            for (std::size_t source_depth = 0; current && source_depth < maximum_region_depth;
+                 ++source_depth, current = parent(*current)) {
+                if (current == target) {
+                    return true;
+                }
+            }
+        }
+    }
+    if (subject.source_domains && !subject.source_domains->empty()) {
+        if (const auto target_domains =
+                scopedValue(region, Flag::NonPlayerProtectionDomains, RegionSubject::environment())) {
+            for (const auto &domain : *subject.source_domains) {
+                if (target_domains->get<FlagSet>()->contains(domain)) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 bool RegionContext::matches(const Region &region, RegionGroup group, std::string_view player_id) const
 {
+    return matches(region, group, RegionSubject::player(player_id));
+}
+
+bool RegionContext::matches(const Region &region, RegionGroup group, const RegionSubject &subject) const
+{
+    if (subject.kind == RegionSubjectKind::Environment) {
+        return group == RegionGroup::All;
+    }
+    const bool owner = subject.kind == RegionSubjectKind::Player && isOwner(region, subject.player_id);
     switch (group) {
     case RegionGroup::All:
         return true;
     case RegionGroup::Members:
-        return isMember(region, player_id);
+        return isMember(region, subject);
     case RegionGroup::Owners:
-        return isOwner(region, player_id);
+        return owner;
     case RegionGroup::NonMembers:
-        return !isMember(region, player_id);
+        return !isMember(region, subject);
     case RegionGroup::NonOwners:
-        return !isOwner(region, player_id);
+        return !owner;
     }
     throw std::invalid_argument("Unknown region group");
 }
@@ -94,12 +140,18 @@ RegionGroup RegionContext::group(const Region &region, Flag flag) const
 
 std::optional<FlagState> RegionContext::scopedState(const Region &region, Flag flag, std::string_view player_id) const
 {
+    const auto value = scopedValue(region, flag, RegionSubject::player(player_id));
+    return value ? value->state() : std::nullopt;
+}
+
+std::optional<FlagValue> RegionContext::scopedValue(const Region &region, Flag flag, const RegionSubject &subject) const
+{
     const Region *current = &region;
     const Region *group_source = current;
     for (std::size_t depth = 0; current && depth < maximum_region_depth; ++depth, current = parent(*current)) {
         const auto found = current->flags.find(flag);
         if (found != current->flags.end() && found->second != FlagState::Inherit) {
-            if (matches(region, group(*group_source, flag), player_id)) {
+            if (matches(region, group(*group_source, flag), subject)) {
                 return found->second;
             }
             // A scoped exception cannot discard the rules of ancestors outside that exception's scope.

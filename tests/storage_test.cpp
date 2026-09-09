@@ -1,4 +1,5 @@
 #include "dimenguard/storage/limits.h"
+#include "dimenguard/storage/schema.h"
 #include "dimenguard/storage/sqlite_store.h"
 #include "support/database_fixture.h"
 #include "support/region_assertions.h"
@@ -138,7 +139,7 @@ TEST_F(StorageTest, FutureSchemaIsRejectedWithoutErasingRegions)
     }
     executeRaw("PRAGMA user_version = 99");
     EXPECT_THROW(SqliteStore{path_}, std::runtime_error);
-    executeRaw("PRAGMA user_version = 2");
+    executeRaw("PRAGMA user_version = " + std::to_string(storage::schema_version));
     SqliteStore reopened(path_);
     const auto loaded = reopened.load();
     ASSERT_EQ(loaded.size(), 1);
@@ -150,11 +151,11 @@ TEST_F(StorageTest, EveryOperationChecksSchemaVersionAfterConnectionWasOpened)
     SqliteStore store(path_);
     const auto original = makeRegion();
     store.save({original});
-    for (const auto version : {0, 1, 99}) {
+    for (const auto version : {0, 1, 2, 99}) {
         executeRaw("PRAGMA user_version = " + std::to_string(version));
         EXPECT_THROW(static_cast<void>(store.load()), std::runtime_error);
         EXPECT_THROW(store.save({}), std::runtime_error);
-        executeRaw("PRAGMA user_version = 2");
+        executeRaw("PRAGMA user_version = " + std::to_string(storage::schema_version));
         const auto loaded = store.load();
         ASSERT_EQ(loaded.size(), 1);
         expectRegionEqual(loaded.front(), original);

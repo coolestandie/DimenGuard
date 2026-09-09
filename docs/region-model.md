@@ -1,5 +1,8 @@
 # Region model: WG-1
 
+This document records the WG-1 baseline. [WG-2](flag-semantics.md) extends its values,
+explosion behavior and storage to schema 3; use that contract for the current branch.
+
 WG-1 is the unreleased domain and persistence foundation for the next update. It adds region
 hierarchy, dimension-wide policy, templates and groups to the existing shared protection
 resolver. The public `0.2.0-rc1` download is unchanged. Creating these new region types and

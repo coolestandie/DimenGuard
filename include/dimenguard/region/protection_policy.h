@@ -13,8 +13,13 @@ public:
     // Matches use snapshot priority order (global last); parented regions require that snapshot's context.
     [[nodiscard]] static bool isAllowed(std::span<const Region *const> matching, Flag flag, std::string_view player_id,
                                         bool bypass = false, const RegionContext &context = {});
+    [[nodiscard]] static bool isAllowed(std::span<const Region *const> matching, Flag flag,
+                                        const RegionSubject &subject, const RegionContext &context = {});
     [[nodiscard]] static bool isEnvironmentAllowed(std::span<const Region *const> matching, Flag flag,
                                                    const RegionContext &context = {});
+    [[nodiscard]] static std::optional<FlagValue> getFlagValue(std::span<const Region *const> matching, Flag flag,
+                                                               const RegionSubject &subject,
+                                                               const RegionContext &context = {});
 };
 
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <memory>
@@ -57,6 +58,7 @@ public:
     [[nodiscard]] std::int64_t integer(int column) const;
     [[nodiscard]] int integer32(int column) const;
     [[nodiscard]] std::string text(int column) const;
+    [[nodiscard]] std::string text(int column, std::size_t maximum_length) const;
     [[nodiscard]] std::optional<std::string> optionalText(int column) const;
 
 private:

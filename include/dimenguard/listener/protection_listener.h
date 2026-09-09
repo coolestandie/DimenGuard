@@ -9,6 +9,7 @@
 #include "dimenguard/listener/player_interaction_listener.h"
 #include "dimenguard/listener/player_movement_listener.h"
 #include "dimenguard/listener/player_session_listener.h"
+#include "dimenguard/listener/spawn_listener.h"
 #include "dimenguard/listener/world_block_listener.h"
 #include "dimenguard/protection/protection_context.h"
 
@@ -33,6 +34,7 @@ private:
     PlayerMovementListener movements_;
     ItemListener items_;
     PlayerActivityListener player_activities_;
+    SpawnListener spawns_;
 };
 
 }

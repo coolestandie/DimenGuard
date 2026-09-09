@@ -1,5 +1,21 @@
 # Release notes
 
+## Unreleased: WG-2 unified flag semantics
+
+- Unify typed parsing, values, inheritance, groups, defaults, persistence and command
+  presentation. Keep existing player policies; add seven functional flags (33 total).
+- Filter explosion terrain per affected block, distinguish TNT/creeper/other sources,
+  apply TNT regional association/domains and keep victim damage independent.
+- Add deny-spawn actor sets and literal entry/exit denial messages. Generate state
+  suggestions from the registry without restricting free-text flag values.
+- Upgrade schema 1/2 directly to schema 3 with a consistent original-version backup
+  and transactional validation. Older binaries require their pre-upgrade backup.
+- Piston boundaries, TNT ignition-origin tracking and additional numeric/location/
+  session-effect consumers remain unsupported. No native hooks are introduced.
+
+Read [the compatibility, commands and recovery contract](flag-semantics.md). This work
+is not deployed or released; actual BDS/client acceptance is still required.
+
 ## Unreleased: WG-1 region model
 
 - Add explicit cuboid, global and template kinds, bounded same-dimension parent hierarchies,

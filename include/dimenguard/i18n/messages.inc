@@ -54,14 +54,41 @@ DG_MESSAGE(
     Info, "{0} | {1} | priority {2}\nBounds: ({3}, {4}, {5}) to ({6}, {7}, {8})\nOwner UUID: {9} | members: {10}",
     "{0} | {1} | prioridad {2}\nLímites: ({3}, {4}, {5}) a ({6}, {7}, {8})\nUUID del propietario: {9} | miembros: {10}")
 DG_MESSAGE(FlagInfo, "{0}: {1}", "{0}: {1}")
+DG_MESSAGE(FlagTypeInfo, "Value type: {0}.", "Tipo de valor: {0}.")
+DG_MESSAGE(FlagValueHints, "Value shortcuts: {0}.", "Opciones rápidas: {0}.")
+DG_MESSAGE(FlagValueUnset, "(unset)", "(sin valor)")
+DG_MESSAGE(FlagGroupInfo, "Stored group: {0}.", "Grupo guardado: {0}.")
+DG_MESSAGE(FlagBaseInfo, "Unset values fall back to {0}.", "Sin valor, hereda {0}.")
+DG_MESSAGE(FlagTypedSyntax, "Text accepts spaces; sets use comma-separated IDs or [] for an empty set.",
+           "El texto admite espacios; los conjuntos usan IDs separados por comas o [] para vaciarlos.")
+DG_MESSAGE(FlagUnsetSyntax, "Clear any stored value: /dg flag <region> <flag> --unset",
+           "Borra cualquier valor guardado: /dg flag <region> <flag> --unset")
+DG_MESSAGE(FlagCleared, "Region '{0}': {1} now inherits its value.",
+           "Región '{0}': {1} ahora hereda su valor.")
+DG_MESSAGE(InvalidFlagValue, "Invalid value. Query /dg flag <region> <flag> to see its type; --unset clears it.",
+           "Valor inválido. Consulta /dg flag <region> <flag> para ver su tipo; --unset lo borra.")
+DG_MESSAGE(FlagTntDescription, "Reported TNT explosions; block damage also checks source-region protection.",
+           "Explosiones de TNT registradas; el daño a bloques también revisa la región de origen.")
+DG_MESSAGE(FlagCreeperExplosionDescription, "Reported creeper explosions; inherits explosions.",
+           "Explosiones de creepers registradas; hereda explosions.")
+DG_MESSAGE(FlagOtherExplosionDescription, "Other identified explosions; inherits explosions.",
+           "Otras explosiones identificadas; hereda explosions.")
+DG_MESSAGE(FlagDenySpawnDescription, "Set of actor IDs denied on spawn, such as minecraft:zombie.",
+           "Conjunto de IDs de entidades que no pueden aparecer, como minecraft:zombie.")
+DG_MESSAGE(FlagEntryDenyMessageDescription, "Text shown when a reported entry is denied.",
+           "Texto mostrado cuando se deniega una entrada registrada.")
+DG_MESSAGE(FlagExitDenyMessageDescription, "Text shown when a reported exit is denied.",
+           "Texto mostrado cuando se deniega una salida registrada.")
+DG_MESSAGE(FlagNonPlayerProtectionDomainsDescription, "Shared domain IDs for supported non-player block changes.",
+           "Dominios compartidos para cambios de bloques no humanos compatibles.")
 DG_MESSAGE(FlagsAvailable, "Available flags", "Flags disponibles")
 DG_MESSAGE(FlagsPage, "{0} (page {1}/{2}, {3} flags)", "{0} (página {1}/{2}, {3} flags)")
 DG_MESSAGE(FlagScopePlayer, "Player actions", "Acciones de jugadores")
 DG_MESSAGE(FlagScopeEnvironment, "World and actor rules", "Reglas del mundo y entidades")
 DG_MESSAGE(FlagScopeTransition, "Movement", "Movimiento")
 DG_MESSAGE(FlagNavigation, "Browse: {0}", "Consulta: {0}")
-DG_MESSAGE(FlagBuildDescription, "Player block breaking, placement and supported bucket actions.",
-           "Rotura y colocación de bloques por jugadores y usos compatibles de cubetas.")
+DG_MESSAGE(FlagBuildDescription, "Player building and the fallback for supported TNT block changes.",
+           "Construcción por jugadores y regla base para cambios de bloques de TNT compatibles.")
 DG_MESSAGE(FlagInteractDescription, "Supported right-click block and actor interactions.",
            "Interacciones compatibles con clic derecho en bloques y con entidades.")
 DG_MESSAGE(FlagContainerDescription, "Opening interactions for recognized block containers.",
@@ -85,8 +112,8 @@ DG_MESSAGE(FlagEntryDescription, "Entering on reported moves/teleports; portal c
            "Entrada por movimientos/teletransportes registrados; portales parciales.")
 DG_MESSAGE(FlagExitDescription, "Leaving on reported moves/teleports; portal coverage is incomplete.",
            "Salida por movimientos/teletransportes registrados; portales parciales.")
-DG_MESSAGE(FlagBlockBreakDescription, "Player block breaking; falls back to build.",
-           "Rotura de bloques por jugadores; hereda build.")
+DG_MESSAGE(FlagBlockBreakDescription, "Player breaking and supported TNT block changes; inherits build.",
+           "Rotura por jugadores y cambios de TNT compatibles; hereda build.")
 DG_MESSAGE(FlagBlockPlaceDescription, "Player block placement; falls back to build.",
            "Colocación de bloques por jugadores; hereda build.")
 DG_MESSAGE(FlagUseDescription, "Supported block use; falls back to interact.",
@@ -111,15 +138,15 @@ DG_MESSAGE(FlagFireworkDamageDescription, "Reported firework damage to mobs and 
            "Daño de fuegos artificiales registrado en mobs y jugadores.")
 DG_MESSAGE(FlagDefaults, "Defaults: build/interact/container-access require membership.",
            "Por defecto: build/interact/container-access exigen membresía.")
-DG_MESSAGE(FlagFallbacks, "Unset granular flags follow build, interact, use or fluid-flow.",
-           "Las flags específicas sin valor heredan build, interact, use o fluid-flow.")
+DG_MESSAGE(FlagFallbacks, "Unset granular flags follow their registered base flag.",
+           "Las flags específicas sin valor heredan su regla base registrada.")
 DG_MESSAGE(FlagSyntax, "Usage: {0}", "Uso: {0}")
 DG_MESSAGE(FlagExample, "Example: /dg flag spawn pvp deny", "Ejemplo: /dg flag spawn pvp deny")
 DG_MESSAGE(RegionFlags, "Region '{0}': stored flags", "Región '{0}': flags guardadas")
 DG_MESSAGE(FlagInvincibleDescription, "allow blocks reported player damage; default deny.",
            "allow bloquea daño recibido por jugadores; por defecto deny.")
-DG_MESSAGE(FlagImmunityDefault, "Other flags default to allow; invincible uses deny (no immunity).",
-           "Las demás usan allow por defecto; invincible usa deny (sin inmunidad).")
+DG_MESSAGE(FlagImmunityDefault, "Other state flags default to allow; invincible uses deny (no immunity).",
+           "Las demás flags de estado usan allow; invincible usa deny (sin inmunidad).")
 DG_MESSAGE(FlagInheritance, "inherit follows overlapping regions and default rules.",
            "inherit consulta las regiones superpuestas y las reglas predeterminadas.")
 DG_MESSAGE(FlagSet, "Region '{0}': {1} = {2}.", "Región '{0}': {1} = {2}.")

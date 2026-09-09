@@ -65,7 +65,7 @@ struct Region {
     int priority = 0;
     std::string owner;
     std::unordered_set<std::string> members;
-    std::map<Flag, FlagState> flags;
+    std::map<Flag, FlagValue> flags;
     RegionKind kind = RegionKind::Cuboid;
     std::optional<std::string> parent = std::nullopt;
     FlagState passthrough = FlagState::Inherit;

@@ -97,9 +97,8 @@ void validateRegion(const Region &region)
     if (region.members.contains("")) {
         throw std::invalid_argument("Region member identities must not be empty");
     }
-    for (const auto &[flag, state] : region.flags) {
-        static_cast<void>(flagName(flag));
-        static_cast<void>(stateName(state));
+    for (const auto &[flag, value] : region.flags) {
+        validateFlagValue(flag, value);
     }
     for (const auto &[flag, group] : region.flag_groups) {
         static_cast<void>(regionGroupName(group));

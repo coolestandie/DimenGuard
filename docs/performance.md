@@ -45,3 +45,15 @@ exact speedup ratio.
 Full-snapshot administrative saves remain synchronous and expensive at the maximum count.
 The new hierarchy does not remove that existing storage limitation. These timings exclude
 Bedrock event dispatch and do not measure a live server or deeply overlapping parent chains.
+
+## WG-2 regression sample
+
+On 2026-09-09 the same Windows x64 Clang 19.1.5 upstream-pinned build passed the
+benchmark's result checks after typed-value and subject integration. At 10,000 regions,
+the sparse query measured 0.438 us, the 32-level inherited membership decision 5.002 us,
+and inherited group decision 3.433 us. A full administrative snapshot change took
+384.074 ms. These are single-run samples, not a controlled performance comparison.
+
+This benchmark does not measure per-block explosion filtering, actor additions or message
+delivery inside BDS. Typed sets and domain queries still need realistic runtime measurements.
+The synchronous full-snapshot administrative write remains a documented limitation.

@@ -4,6 +4,31 @@ Offline tests and Bedrock runtime acceptance are separate checks. The gameplay/c
 below is **pending**. Successful startup alone does not establish runtime protection coverage.
 Read [event-coverage.md](event-coverage.md) for the source audit and known API limitations.
 
+## WG-2 acceptance (not run)
+
+Use the [WG-2 compatibility contract](flag-semantics.md), an exact-ABI DLL and a disposable
+world. None of the following checks has been marked as passed by the offline suite:
+
+- Migrate a copied schema 1 and schema 2 database; verify the untouched original-version
+  backup, groups/parents, restart, and reload. Never test migration on the only live copy.
+- Place TNT outside an inclusive cuboid boundary: outside terrain may break, protected target
+  blocks remain. Repeat inside the region and with block-break deny. Check actual server blocks.
+- Test negative coordinates, overlapping parents, shared/different domains and another dimension.
+  A domain on one overlapping region must not grant membership in an unrelated protected region.
+- Move primed TNT across the boundary before detonation: record the known current-origin limit.
+  This update does not claim ignition tracking or protection against that cannon path by default.
+- Compare TNT, TNT minecarts, creepers and unidentified beds/anchors with subtype/aggregate
+  conflicts. Check terrain and victim damage separately; confirm allowed terrain is retained.
+- Cancel or alter an explosion from another plugin; confirm prior cancellation and guarded errors.
+- Use deny-spawn with vanilla/custom actor IDs, empty sets, and mob-spawning deny. Verify removal
+  on reported additions, player exclusion and unchanged mobs outside the region.
+- Set English/Spanish denial text, quoted empty text and literal inherit. Check one-second
+  message throttling, inherited/grouped messages, exit-before-entry and unchanged-region silence.
+- Check `/dg flag` queries, per-flag state hints, free text/sets, quoted spaces, --unset, numeric
+  region names and both client languages. Invalid values must not alter saved or live rules.
+- Confirm unsupported piston/automation and unreported portal/spawn/damage routes are not
+  mistaken for coverage. The public upstream DLL is not the custom chunk-fork server build.
+
 ## Offline checks
 
 Run `./scripts/build.ps1` from the repository root to build the plugin and run CTest. Use

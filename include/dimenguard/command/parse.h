@@ -19,10 +19,13 @@ namespace dimenguard {
     return value;
 }
 
-/** Split a native message tail into bounded arguments; quotes preserve one whole argument. */
 [[nodiscard]] inline std::optional<std::vector<std::string>> parseCommandArguments(std::string_view text,
-                                                                                   std::size_t max_count)
+                                                                                   std::size_t max_count,
+                                                                                   bool message_tail = false)
 {
+    if (text.size() > 8192) {
+        return std::nullopt;
+    }
     for (const unsigned char character : text) {
         if (character < 32 || character == 127) {
             return std::nullopt;
@@ -37,6 +40,20 @@ namespace dimenguard {
         text.remove_prefix(first);
         if (arguments.size() == max_count) {
             return std::nullopt;
+        }
+        if (message_tail && arguments.size() + 1 == max_count) {
+            text = text.substr(0, text.find_last_not_of(' ') + 1);
+            if (text.front() == '"') {
+                const auto quoted = parseCommandArguments(text, 1);
+                if (!quoted) {
+                    return std::nullopt;
+                }
+                arguments.push_back(quoted->front());
+            }
+            else {
+                arguments.emplace_back(text);
+            }
+            return arguments;
         }
         if (text.front() == '"') {
             const auto closing = text.find('"', 1);

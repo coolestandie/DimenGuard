@@ -1,4 +1,5 @@
 #include "dimenguard/command/context.h"
+#include "dimenguard/command/flag_input.h"
 #include "dimenguard/command/handlers.h"
 #include "dimenguard/presentation/flag_panel.h"
 namespace dimenguard {
@@ -20,10 +21,15 @@ void executeFlagCommand(CommandContext &context, endstone::CommandSender &sender
         requireArgument(selected.has_value(), Message::InvalidFlag);
     }
     if (args.size() == 3) {
-        const auto state = parseState(args[2]);
-        requireArgument(state.has_value(), Message::InvalidFlag);
-        service.setFlag(region.key, *selected, *state);
-        messages.send(sender, Message::FlagSet, args[0], args[1], args[2]);
+        const auto change = parseFlagChange(*selected, args[2]);
+        requireArgument(change.has_value(), Message::InvalidFlagValue);
+        service.setFlagValue(region.key, *selected, change->value);
+        if (!change->value) {
+            messages.send(sender, Message::FlagCleared, args[0], args[1]);
+        }
+        else {
+            messages.send(sender, Message::FlagSet, args[0], args[1], displayFlagValue(*change->value));
+        }
     }
     else {
         messages.sendLines(sender, renderRegionFlags(region, locale, selected));

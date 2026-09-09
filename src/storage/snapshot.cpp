@@ -3,14 +3,54 @@
 #include "dimenguard/storage/limits.h"
 #include "dimenguard/storage/sqlite.h"
 
+#include <algorithm>
+#include <array>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 
 namespace dimenguard::storage {
 namespace {
+
+// A new registry entry must never reinterpret data written by an older schema.
+constexpr auto legacy_flags = std::to_array<std::string_view>({"build",
+                                                               "interact",
+                                                               "container-access",
+                                                               "pvp",
+                                                               "explosions",
+                                                               "fluid-flow",
+                                                               "block-form",
+                                                               "leaf-decay",
+                                                               "actor-griefing",
+                                                               "mob-spawning",
+                                                               "mob-damage",
+                                                               "entry",
+                                                               "exit",
+                                                               "block-break",
+                                                               "block-place",
+                                                               "use",
+                                                               "use-anvil",
+                                                               "sleep",
+                                                               "item-drop",
+                                                               "item-pickup",
+                                                               "send-chat",
+                                                               "water-flow",
+                                                               "lava-flow",
+                                                               "fall-damage",
+                                                               "firework-damage",
+                                                               "invincible"});
+
+std::optional<Flag> parseStoredFlag(std::string_view name, int schema_version)
+{
+    if (schema_version < 3 && std::ranges::find(legacy_flags, name) == legacy_flags.end()) {
+        return std::nullopt;
+    }
+    return parseFlag(name);
+}
 
 struct LoadedSnapshot {
     std::vector<Region> regions;
@@ -59,7 +99,7 @@ LoadedSnapshot readRegions(const sqlite::Connection &connection, int schema_vers
                          {query.integer32(7), query.integer32(8), query.integer32(9)}};
         region.priority = query.integer32(10);
         region.owner = query.text(11);
-        if (schema_version == 2) {
+        if (schema_version >= 2) {
             const auto kind_name = query.text(12);
             const auto kind = parseRegionKind(kind_name);
             const auto passthrough_name = query.text(14);
@@ -90,30 +130,38 @@ void readMembers(const sqlite::Connection &connection, LoadedSnapshot &snapshot)
     }
 }
 
-void readFlags(const sqlite::Connection &connection, LoadedSnapshot &snapshot)
+void readFlags(const sqlite::Connection &connection, LoadedSnapshot &snapshot, int schema_version)
 {
-    sqlite::Statement query(connection, "SELECT region_id, name, state FROM flags");
+    const auto *sql = schema_version < 3 ? "SELECT region_id, name, state FROM flags"
+                                         : "SELECT region_id, name, value, type FROM flags";
+    sqlite::Statement query(connection, sql);
     while (query.next()) {
-        const auto name = query.text(1);
-        const auto state_name = query.text(2);
-        const auto flag = parseFlag(name);
-        const auto state = parseState(state_name);
-        if (!flag || !state) {
-            throw std::runtime_error("Unsupported stored flag '" + name + "' or state '" + state_name + "'.");
+        const auto name = query.text(1, 64);
+        const auto flag = parseStoredFlag(name, schema_version);
+        if (!flag) {
+            throw std::runtime_error("Unsupported stored flag '" + name + "'.");
         }
-        if (!snapshot.find(query.integer(0)).flags.emplace(*flag, *state).second) {
+        const auto type = schema_version < 3 ? std::optional{FlagType::State} : parseFlagType(query.text(3, 16));
+        if (!type || *type != flagType(*flag)) {
+            throw std::runtime_error("Invalid stored type for flag '" + name + "'.");
+        }
+        const auto value = parseFlagValue(*flag, query.text(2, maximum_encoded_flag_bytes));
+        if (!value) {
+            throw std::runtime_error("Invalid stored value for flag '" + name + "'.");
+        }
+        if (!snapshot.find(query.integer(0)).flags.emplace(*flag, *value).second) {
             throw std::runtime_error("The database contains a duplicate region flag.");
         }
     }
 }
 
-void readGroups(const sqlite::Connection &connection, LoadedSnapshot &snapshot)
+void readGroups(const sqlite::Connection &connection, LoadedSnapshot &snapshot, int schema_version)
 {
     sqlite::Statement query(connection, "SELECT region_id, name, group_name FROM flag_groups");
     while (query.next()) {
-        const auto name = query.text(1);
-        const auto group_name = query.text(2);
-        const auto flag = parseFlag(name);
+        const auto name = query.text(1, 64);
+        const auto group_name = query.text(2, 16);
+        const auto flag = parseStoredFlag(name, schema_version);
         const auto group = parseRegionGroup(group_name);
         if (!flag || !group) {
             throw std::runtime_error("Unsupported stored group '" + group_name + "' or flag '" + name + "'.");
@@ -129,14 +177,14 @@ void readGroups(const sqlite::Connection &connection, LoadedSnapshot &snapshot)
 
 std::vector<Region> readSnapshot(const sqlite::Connection &connection, int schema_version)
 {
-    if (schema_version != 1 && schema_version != 2) {
+    if (schema_version != 1 && schema_version != 2 && schema_version != 3) {
         throw std::runtime_error("The snapshot format is not supported.");
     }
     auto snapshot = readRegions(connection, schema_version);
     readMembers(connection, snapshot);
-    readFlags(connection, snapshot);
-    if (schema_version == 2) {
-        readGroups(connection, snapshot);
+    readFlags(connection, snapshot, schema_version);
+    if (schema_version >= 2) {
+        readGroups(connection, snapshot, schema_version);
     }
     validateRegions(snapshot.regions);
     return std::move(snapshot.regions);
@@ -149,7 +197,7 @@ void writeSnapshot(const sqlite::Connection &connection, const std::vector<Regio
                                     "max_y, max_z, priority, owner, kind, parent, passthrough) "
                                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     sqlite::Statement insert_member(connection, "INSERT INTO members (region_id, identity) VALUES (?, ?)");
-    sqlite::Statement insert_flag(connection, "INSERT INTO flags (region_id, name, state) VALUES (?, ?, ?)");
+    sqlite::Statement insert_flag(connection, "INSERT INTO flags (region_id, name, type, value) VALUES (?, ?, ?, ?)");
     sqlite::Statement insert_group(connection,
                                    "INSERT INTO flag_groups (region_id, name, group_name) VALUES (?, ?, ?)");
     for (const auto &region : regions) {
@@ -179,10 +227,11 @@ void writeSnapshot(const sqlite::Connection &connection, const std::vector<Regio
             insert_member.bind(2, member);
             insert_member.run();
         }
-        for (const auto &[flag, state] : region.flags) {
+        for (const auto &[flag, value] : region.flags) {
             insert_flag.bind(1, id);
             insert_flag.bind(2, flagName(flag));
-            insert_flag.bind(3, stateName(state));
+            insert_flag.bind(3, valueTypeName(flagType(flag)));
+            insert_flag.bind(4, formatFlagValue(value));
             insert_flag.run();
         }
         for (const auto &[flag, group] : region.flag_groups) {

@@ -302,14 +302,15 @@ TEST(TransitionRules, UnchangedDeniedRegionDoesNotPreventLeavingAnotherRegion)
 
 using WorldFlagsStorageTest = test::DatabaseFixture;
 
-TEST_F(WorldFlagsStorageTest, EveryRegisteredFlagAndStateSurvivesDatabaseReopen)
+TEST_F(WorldFlagsStorageTest, EveryRegisteredStateFlagSurvivesDatabaseReopen)
 {
-    ASSERT_EQ(supportedFlags().size(), 26);
     std::vector<Region> expected;
     for (const auto state : supportedFlagStates()) {
         auto region = makeRegion(std::string(stateName(state)));
         for (const auto flag : supportedFlags()) {
-            region.flags[flag] = state;
+            if (flagType(flag) == FlagType::State) {
+                region.flags[flag] = state;
+            }
         }
         expected.push_back(std::move(region));
     }

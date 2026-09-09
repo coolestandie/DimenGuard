@@ -40,6 +40,7 @@ struct CommandSpec {
 };
 
 [[nodiscard]] std::span<const CommandSpec> commandCatalog();
+[[nodiscard]] std::vector<CommandSpec> clientCommandCatalog();
 [[nodiscard]] std::string helpUsage(const CommandSpec &command);
 [[nodiscard]] std::vector<std::string> nativeUsages();
 

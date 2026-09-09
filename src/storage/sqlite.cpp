@@ -189,12 +189,22 @@ int Statement::integer32(int column) const
 
 std::string Statement::text(int column) const
 {
+    return text(column, std::numeric_limits<std::size_t>::max());
+}
+
+std::string Statement::text(int column, std::size_t maximum_length) const
+{
     requireType(column, SQLITE_TEXT);
     const auto *value = sqlite3_column_text(statement_, column);
     if (value == nullptr) {
         throw std::runtime_error("Could not read a text field: SQLite ran out of memory.");
     }
-    return {reinterpret_cast<const char *>(value), static_cast<std::size_t>(sqlite3_column_bytes(statement_, column))};
+    const auto length = static_cast<std::size_t>(sqlite3_column_bytes(statement_, column));
+    if (length > maximum_length) {
+        throw std::runtime_error("Stored column '" + std::string(columnName(column)) +
+                                 "' exceeds its supported length.");
+    }
+    return {reinterpret_cast<const char *>(value), length};
 }
 
 std::optional<std::string> Statement::optionalText(int column) const

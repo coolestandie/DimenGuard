@@ -24,9 +24,24 @@ std::vector<const Region *> difference(std::span<const Region *const> source, st
 bool TransitionPolicy::isAllowed(std::span<const Region *const> from, std::span<const Region *const> to,
                                  std::string_view player_id, const RegionContext &context)
 {
+    return !getDenial(from, to, player_id, context);
+}
+
+std::optional<TransitionDenial> TransitionPolicy::getDenial(std::span<const Region *const> from,
+                                                            std::span<const Region *const> to,
+                                                            std::string_view player_id, const RegionContext &context)
+{
     const auto exited = difference(from, to);
     const auto entered = difference(to, from);
-    return ProtectionPolicy::isAllowed(exited, Flag::Exit, player_id, false, context) &&
-           ProtectionPolicy::isAllowed(entered, Flag::Entry, player_id, false, context);
+    for (const auto flag : {Flag::Exit, Flag::Entry}) {
+        const auto &changed = flag == Flag::Exit ? exited : entered;
+        if (!ProtectionPolicy::isAllowed(changed, flag, player_id, false, context)) {
+            const auto value = ProtectionPolicy::getFlagValue(
+                changed, flag == Flag::Exit ? Flag::ExitDenyMessage : Flag::EntryDenyMessage,
+                RegionSubject::player(player_id), context);
+            return TransitionDenial{flag, value ? std::optional{*value->get<std::string>()} : std::nullopt};
+        }
+    }
+    return std::nullopt;
 }
 }

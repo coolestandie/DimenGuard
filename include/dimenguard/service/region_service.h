@@ -56,6 +56,7 @@ public:
     void setParent(const RegionKey &key, std::optional<RegionKey> parent);
     void setPassthrough(const RegionKey &key, FlagState state);
     void setFlag(const RegionKey &key, Flag flag, FlagState state);
+    void setFlagValue(const RegionKey &key, Flag flag, std::optional<FlagValue> value);
     void setFlagGroup(const RegionKey &key, Flag flag, std::optional<RegionGroup> group);
     void setMember(const RegionKey &key, std::string player_id, bool trusted);
 
