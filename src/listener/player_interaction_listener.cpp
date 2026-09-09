@@ -1,6 +1,7 @@
 #include "dimenguard/listener/player_interaction_listener.h"
 
 #include "dimenguard/protection/protection_context.h"
+#include "dimenguard/rules/block_rules.h"
 
 #include <endstone/block/container.h>
 #include <endstone/event/player/player_armor_stand_manipulate_event.h>
@@ -45,10 +46,16 @@ bool PlayerInteractionListener::onInteract(endstone::PlayerInteractEvent &event)
         return true;
     }
     const auto &block = *event.getBlock();
+    const auto type = block.getType().getId();
+    const auto use_flag = blockUseFlag(type.getNamespace(), type.getKey());
     const auto container = block.captureState(false).as<endstone::Container>();
-    const auto flag = container ? Flag::ContainerAccess : Flag::Interact;
-    return context_.allowed(*event.getPlayer(), block.getLocation(), flag) &&
-           (!container || context_.chestNeighbors(*event.getPlayer(), block));
+    auto &player = *event.getPlayer();
+    if (container) {
+        return context_.allowed(player, block.getLocation(), Flag::ContainerAccess) &&
+               context_.chestNeighbors(player, block) &&
+               (!use_flag || context_.allowed(player, block.getLocation(), *use_flag));
+    }
+    return context_.allowed(player, block.getLocation(), use_flag.value_or(Flag::Interact));
 }
 
 bool PlayerInteractionListener::onInteractActor(endstone::PlayerInteractActorEvent &event)

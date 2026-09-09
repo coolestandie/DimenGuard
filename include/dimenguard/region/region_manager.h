@@ -37,9 +37,10 @@ public:
     [[nodiscard]] std::vector<const Region *> query(const DimensionKey &dimension, const BlockPosition &position) const;
 
     /**
-     * Explicit flags fall through inherited priority tiers; deny wins ties. With no explicit
-     * decision, build/interact/container require membership in every top-priority region, while
-     * other flags are allowed. No matching region permits the action. Only explicit bypass skips policy.
+     * Explicit flags fall through inherited priority tiers; deny wins ties. Unset granular flags
+     * follow their registered base. Defaults may require membership in every top-priority region;
+     * invincible instead defaults to false, including outside regions. Explicit bypass skips this
+     * player policy; immunity must be queried through the bypass-independent environmental policy.
      */
     [[nodiscard]] bool isAllowed(const DimensionKey &dimension, const BlockPosition &position, Flag flag,
                                  std::string_view player_id, bool bypass = false) const;

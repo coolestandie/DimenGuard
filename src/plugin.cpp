@@ -85,7 +85,7 @@ ENDSTONE_PLUGIN("dimenguard", DIMENGUARD_VERSION, dimenguard::DimenGuardPlugin)
         root_command.usages(usage);
     }
     permission("dimenguard.use")
-        .description("Use help and language commands.")
+        .description("Use help, flag discovery and language commands.")
         .default_(endstone::PermissionDefault::True);
     permission("dimenguard.command")
         .description("Manage regions, flags and membership.")

@@ -61,6 +61,7 @@ const auto &definitions()
                     Message::HelpUntrust,
                     true,
                     {{"region", Kind::Word, false, {}}, {"player", Kind::Player, false, {}}}},
+        CommandSpec{"flags", Section::Protection, Message::HelpFlags, false, {{"page", Kind::Integer, true, {}}}},
         CommandSpec{"help", Section::General, Message::HelpShow, false, {}, true},
         CommandSpec{"reload", Section::General, Message::HelpReload, true, {}},
         CommandSpec{"language",

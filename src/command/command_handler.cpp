@@ -45,7 +45,7 @@ void CommandHandler::execute(endstone::CommandSender &sender, std::span<const st
 }
 void CommandHandler::dispatch(endstone::CommandSender &sender, std::span<const std::string> args)
 {
-    if (args.empty() || args[0] == "help" || args[0] == "language") {
+    if (args.empty() || args[0] == "help" || args[0] == "language" || args[0] == "flags") {
         executeGeneralCommand(context_, sender, args);
         return;
     }

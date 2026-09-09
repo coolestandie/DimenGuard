@@ -43,10 +43,10 @@ TEST(CommandCatalog, ContainsEveryCommandPathExactlyOnce)
     const std::set<std::string_view> expected{
         "pos1",        "pos2",        "region create",   "region delete", "region rename",
         "region list", "region info", "region priority", "flag",          "trust",
-        "untrust",     "help",        "reload",          "language",
+        "untrust",     "help",        "reload",          "language",      "flags",
     };
     const auto catalog = commandCatalog();
-    ASSERT_EQ(catalog.size(), 14);
+    ASSERT_EQ(catalog.size(), 15);
     std::set<std::string_view> actual;
     for (const auto &command : catalog) {
         EXPECT_TRUE(actual.insert(command.path).second) << command.path;
@@ -55,10 +55,10 @@ TEST(CommandCatalog, ContainsEveryCommandPathExactlyOnce)
     EXPECT_EQ(actual, expected);
 }
 
-TEST(CommandCatalog, OnlyHelpAndLanguageArePublic)
+TEST(CommandCatalog, OnlyHelpLanguageAndFlagDiscoveryArePublic)
 {
     for (const auto &command : commandCatalog()) {
-        const bool public_command = command.path == "help" || command.path == "language";
+        const bool public_command = command.path == "help" || command.path == "language" || command.path == "flags";
         EXPECT_EQ(command.requires_admin, !public_command) << command.path;
         EXPECT_EQ(command.optional_path, command.path == "help") << command.path;
     }
@@ -125,7 +125,7 @@ TEST(CommandCatalog, FlagStateAndLanguageChoicesMatchSupportedValues)
 TEST(CommandCatalog, EveryNativeOverloadAndEnumNameIsUnique)
 {
     const auto usages = nativeUsages();
-    ASSERT_EQ(usages.size(), 9);
+    ASSERT_EQ(usages.size(), 10);
     std::set<std::string> seen_usages;
     std::set<std::string> seen_enums;
     const std::regex enum_declaration{R"(\([^)]*\)[<\[][a-z0-9_-]+: ([A-Za-z][A-Za-z0-9_]*)[>\]])"};
@@ -164,7 +164,7 @@ TEST(CommandCatalog, NativeRootsNeverOverlapAcrossOverloads)
         }
     }
     EXPECT_EQ(roots, (std::set<std::string>{"pos1", "pos2", "region", "flag", "trust", "untrust", "help", "reload",
-                                            "language"}));
+                                            "language", "flags"}));
 }
 
 TEST(CommandCatalog, RegionActionsShareOneOverloadAndComeFromDetailedCatalog)

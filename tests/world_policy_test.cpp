@@ -20,8 +20,15 @@ const DimensionKey nether{"survival", "minecraft:nether"};
 const DimensionKey second_world{"creative", "minecraft:overworld"};
 constexpr BlockPosition inside{0, 0, 0};
 constexpr BlockPosition outside{17, 0, 0};
-constexpr std::array environment_flags{Flag::Explosions,    Flag::FluidFlow,   Flag::BlockForm, Flag::LeafDecay,
-                                       Flag::ActorGriefing, Flag::MobSpawning, Flag::MobDamage};
+const auto environment_flags = [] {
+    std::vector<Flag> flags;
+    for (const auto flag : supportedFlags()) {
+        if (flagScope(flag) == FlagScope::Environment && flagDefault(flag) == FlagDefault::Allow) {
+            flags.push_back(flag);
+        }
+    }
+    return flags;
+}();
 
 Region makeRegion(std::string name = "spawn", DimensionKey dimension = overworld)
 {
@@ -295,9 +302,9 @@ TEST(TransitionRules, UnchangedDeniedRegionDoesNotPreventLeavingAnotherRegion)
 
 using WorldFlagsStorageTest = test::DatabaseFixture;
 
-TEST_F(WorldFlagsStorageTest, AllThirteenFlagsAndStatesSurviveDatabaseReopen)
+TEST_F(WorldFlagsStorageTest, EveryRegisteredFlagAndStateSurvivesDatabaseReopen)
 {
-    ASSERT_EQ(supportedFlags().size(), 13);
+    ASSERT_EQ(supportedFlags().size(), 26);
     std::vector<Region> expected;
     for (const auto state : supportedFlagStates()) {
         auto region = makeRegion(std::string(stateName(state)));

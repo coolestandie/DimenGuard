@@ -42,6 +42,12 @@ bool ProtectionPolicy::isAllowed(std::span<const Region *const> matching, Flag f
     if (const auto decision = explicitDecision(matching, flag)) {
         return *decision;
     }
+    if (const auto aggregate = flagFallback(flag)) {
+        return isAllowed(matching, *aggregate, player_id);
+    }
+    if (fallback == FlagDefault::Deny) {
+        return false;
+    }
     if (matching.empty() || fallback == FlagDefault::Allow) {
         return true;
     }
@@ -55,7 +61,13 @@ bool ProtectionPolicy::isEnvironmentAllowed(std::span<const Region *const> match
     if (flagScope(flag) != FlagScope::Environment) {
         throw std::invalid_argument("An environmental decision requires an environmental flag");
     }
-    return explicitDecision(matching, flag).value_or(true);
+    if (const auto decision = explicitDecision(matching, flag)) {
+        return *decision;
+    }
+    if (const auto aggregate = flagFallback(flag)) {
+        return isEnvironmentAllowed(matching, *aggregate);
+    }
+    return flagDefault(flag) == FlagDefault::Allow;
 }
 
 }

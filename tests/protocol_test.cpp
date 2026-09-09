@@ -320,7 +320,7 @@ TEST(CommandSuggestions, ClientOverloadsMatchDetailedCatalogAndShareRegionSymbol
     const auto packet = inspect(*output);
     const auto &overloads = packet.commands.at("dg").overloads;
     const auto catalog = commandCatalog();
-    ASSERT_EQ(overloads.size(), 14);
+    ASSERT_EQ(overloads.size(), 15);
     ASSERT_EQ(overloads.size(), catalog.size());
     std::set<std::uint32_t> region_symbols;
     std::size_t region_overloads = 0;

@@ -3,9 +3,14 @@
 DimenGuard is a C++20 region-protection plugin for **Endstone API 0.12**. Regions belong to a
 specific level and dimension, with shared rules for player actions, world events and reported movement.
 
-This is an **alpha**. Offline tests cover the domain and supporting services; the Bedrock runtime
-checks in [testing.md](docs/testing.md) remain pending. It does not provide complete WorldGuard
-coverage. Review [event coverage](docs/event-coverage.md) before relying on a particular action.
+Version **0.2.0 is a public-preview candidate**, with 26 supported state flags. It is not a
+gameplay-verified stable release: the Bedrock checks in [testing.md](docs/testing.md) remain
+pending. It does not provide complete WorldGuard coverage. Review [event coverage](docs/event-coverage.md)
+before relying on a particular action and see the [release notes](docs/release-notes.md).
+
+The candidate targets Windows x64, Endstone API 0.12 at SDK commit
+`46eff9f125f52eac76472d84339ead8fbf51fcd2`, and BDS 1.26.45.1 (protocol 2169).
+An API version match alone does not guarantee ABI compatibility; custom forks need their own build.
 
 ## Build
 
@@ -29,6 +34,14 @@ The script configures the project, compiles it and runs the offline tests. The p
 `build/endstone_dimenguard.dll`. Copy it into a compatible Endstone server's `plugins` directory
 while the server is stopped. Building against a different SDK does not establish compatibility
 with an arbitrary Bedrock server version; verify the exact Endstone and BDS combination separately.
+Use separate build directories for upstream and custom-fork SDKs. The public candidate build is:
+
+```powershell
+./scripts/build.ps1 -BuildDirectory build/public
+```
+
+Follow [release preparation and upgrade instructions](docs/releasing.md) for approved licensing,
+third-party notices, checksums, backups and rollback. A local build does not publish or deploy anything.
 
 For domain and service development without building the plugin adapter:
 
@@ -75,7 +88,8 @@ not supported; UUIDs are still stored internally, so existing ownership and memb
 | `/dg region list [page]` | List regions in the current dimension. |
 | `/dg region info <name>` | Show bounds, priority, owner, membership count and flags. |
 | `/dg region priority <name> <integer>` | Set a signed 32-bit priority; larger numbers take precedence. |
-| `/dg flag` | List supported flags, descriptions and usage. |
+| `/dg flags [page]` | Browse all supported flags, six per page, with descriptions and defaults. |
+| `/dg flag` | Open the first flag catalog page with administrative usage. |
 | `/dg flag <region> [flag]` | Read the stored flag states without modifying the region. |
 | `/dg flag <region> <flag> <allow\|deny\|inherit>` | Set or clear an explicit flag. |
 | `/dg trust <region> <player>` | Add an online player as a trusted member. |
@@ -83,7 +97,7 @@ not supported; UUIDs are still stored internally, so existing ownership and memb
 | `/dg reload` | Reload stored regions, or retry initialization after a storage failure. |
 | `/dg language <en\|es>` | Choose the message language for the current player session. |
 
-`dimenguard.use` defaults to everyone and permits help and language commands.
+`dimenguard.use` defaults to everyone and permits help, flag discovery and language commands.
 `dimenguard.command` defaults to operators and grants administration. Region ownership alone
 does not grant that permission. `dimenguard.bypass` defaults to **false, including for operators**;
 grant it explicitly through your permission system if an account should bypass region decisions.
@@ -92,8 +106,9 @@ The console can use help, reload and the flag catalog; commands needing a dimens
 
 On protocol 2169, the public outgoing-packet API supplies exact client command paths, flags,
 states, languages, online players and existing region names in the current dimension. Suggestions
-refresh after successful create, rename, delete, reload and dimension changes. Running `/dg flag`
-lists supported flags. New names remain free text, including numeric-only names.
+refresh after successful create, rename, delete, reload and dimension changes. Running `/dg flags`
+opens the paginated flag guide. Live region names are sent only to administrators.
+New names remain free text, including numeric-only names.
 Unsupported protocols and unrecognized packets pass through untouched; commands still work,
 but exact client hints and live region completion are unavailable. This adapter does not modify
 Endstone internals or replace server-side validation.
@@ -119,16 +134,26 @@ limited to one per player per second; this does not delay protection decisions.
 | Flag | Basic intercepted action | Default when all applicable flags inherit |
 | --- | --- | --- |
 | `build` | Player block breaking, placement and supported bucket operations. | Owner/member access. |
+| `block-break`, `block-place` | Player breaking and placement, independently. | Follow `build`. |
 | `interact` | Supported targeted block and actor interactions. | Owner/member access. |
+| `use` | Recognized doors, trapdoors, fence gates, buttons and levers. | Follow `interact`. |
+| `use-anvil` | Opening recognized anvils. | Follow `use`, then `interact`. |
+| `sleep` | Reported bed entry; the earlier bed click must also permit interaction. | Follow `interact`. |
 | `container-access` | Opening interactions for recognized block containers. | Owner/member access. |
 | `pvp` | Player-attributed damage between players. | Allowed. |
+| `item-drop` | Items actively dropped by players, excluding death drops. | Allowed. |
+| `item-pickup` | Reported player/mob pickup, including arrows; checks collector and item. | Allowed. |
+| `send-chat` | Player chat dispatched by this server. | Allowed. |
 | `explosions` | Reported explosion origin/affected blocks and explosion damage at victims. | Allowed. |
 | `fluid-flow` | Reported liquid spread, checking both source and destination. | Allowed. |
+| `water-flow`, `lava-flow` | Recognized water/lava spread, independently. | Follow `fluid-flow`. |
 | `block-form` | Reported lava solidification, not all block formation. | Allowed. |
 | `leaf-decay` | Reported leaf removal through decay. | Allowed. |
 | `actor-griefing` | Reported actor changes to a block. | Allowed. |
 | `mob-spawning` | Non-player mobs added to the level; denial removes the added mob. | Allowed. |
 | `mob-damage` | Attributed non-player mob damage to a player. | Allowed. |
+| `fall-damage`, `firework-damage` | Reported fall/firework damage to players and mobs. | Allowed. |
+| `invincible` | `allow` cancels intercepted player damage; `deny` adds no immunity. | Denied (no immunity). |
 | `entry`, `exit` | Region crossings reported by move/same-dimension teleport events. | Allowed. |
 
 Outside every region, actions are allowed. Inside regions, the policy resolves each flag separately:
@@ -137,8 +162,12 @@ Outside every region, actions are allowed. Inside regions, the policy resolves e
 2. At the first priority containing an explicit `allow` or `deny`, `deny` wins any tie. Otherwise,
    an explicit `allow` grants the action. Lower priorities do not override that decision.
 3. `inherit` clears the region's explicit value, allowing evaluation to continue to lower priorities.
-4. If no priority has an explicit value, `build`, `interact` and `container-access` require ownership
-   or membership in **every overlapping region at the highest priority**. Other flags remain allowed.
+4. If no priority has an explicit value for a granular flag, resolve its base flag using the same
+   overlapping regions. The chains are listed above. An explicit granular rule takes precedence
+   over its base rule, even when the base is set on a higher-priority region.
+5. Without explicit or inherited values, `build`, `interact` and `container-access` require ownership
+   or membership in **every overlapping region at the highest priority**. Other action flags allow;
+   `invincible` instead defaults to `deny`, so an unset region adds no immunity.
 
 An explicit `deny` therefore also denies owners and members without bypass. A higher-priority
 region with `inherit` does not erase a lower-priority explicit denial. PvP checks both attacker
@@ -151,15 +180,24 @@ containing both endpoints does not override a newly entered region's entry decis
 This differs from WorldGuard's region-group defaults: explicit entry/exit denial currently
 affects owners too. Existing policy is preserved pending the planned group-aware expansion.
 
-One player action can emit more than one event. Placing a block may require both `build` at
-the destination and `interact` at the clicked block; setting `build allow` alone does not override
-an interaction denial. Every intercepted stage of that action must permit it.
+One player action can emit more than one event. Placing a block may require both `block-place`
+(falling back to `build`) at the destination and `interact` at the clicked block. Every intercepted
+stage must permit the action. In particular, `sleep allow` does not bypass an earlier `interact deny`
+on the bed, and `use-anvil allow` does not bypass `container-access` if the runtime also reports
+a container. This prevents a sleep exception from opening exploding-bed interactions in other dimensions.
+
+`invincible allow` protects players against the intercepted damage event, regardless of owner,
+membership or player bypass. `invincible deny` never forces damage through another denial
+such as `pvp deny`; it simply adds no immunity. It does not cover direct health replacement,
+entity removal, knockback or every secondary effect. Outside all regions it grants no immunity.
+Item pickup uses player bypass only when a player-specific pickup event identifies that player;
+autonomous mob pickup has no invented player identity.
 
 ## Persistence and failure behavior
 
 Regions are stored in `regions.sqlite3` inside the plugin's data folder. The key is the level name,
 complete dimension identifier and region name. Renaming a level changes that mapping; this
-alpha does not automatically migrate regions to the renamed level.
+preview does not automatically migrate regions to the renamed level.
 
 Administrative mutations prepare and validate a complete candidate snapshot, then save it in
 one SQLite transaction. Only a committed save becomes the active in-memory state. Saves are
@@ -221,7 +259,8 @@ Custom native hooks and a public API for other plugins remain deferred.
 | `include/dimenguard/storage`, `src/storage` | SQLite ownership, schema versioning, validation and transactional persistence. |
 | `include/dimenguard/command`, `src/command` | Shared context/catalog/parser plus focused general, selection, region, flag and membership handlers. |
 | `include/dimenguard/adapter` | Conversion between Endstone handles and domain positions/identities. |
-| `include/dimenguard/listener`, `src/listener` | Separate block, interaction, actor, world, explosion, mob, movement, session and command-packet adapters. |
+| `include/dimenguard/listener`, `src/listener` | Separate block, interaction, actor, world, explosion, mob, movement, item, player-activity, session and command-packet adapters. |
+| `include/dimenguard/rules`, `src/rules` | Testable reviewed block, fluid and damage-source classification. |
 | `include/dimenguard/protection`, `src/protection` | Shared target conversion, guarded cancellation, failure handling and policy access. |
 | `include/dimenguard/i18n`, `src/i18n` | Locale selection and bilingual message catalog only. |
 | `include/dimenguard/presentation`, `src/presentation` | Shared theme/panels, help, flag rendering and message delivery. |
@@ -240,3 +279,6 @@ The project follows Endstone's C++ naming and formatting conventions, with focus
 explicit includes, RAII and shared helpers. Format C++ with the checked-in `.clang-format`.
 Branches use `type/short-description`; commits use short English conventional messages.
 Planning notes and agent instructions are local files excluded from version control.
+Prepared [CI checks](docs/ci.md) cover a Windows plugin build and Linux core-only build;
+remote jobs have not yet been run. [Offline scale measurements](docs/performance.md) document
+query and administrative-save costs without claiming server tick performance.

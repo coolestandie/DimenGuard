@@ -18,13 +18,13 @@ void BlockListener::registerEvents()
 
 bool BlockListener::onBreak(endstone::BlockBreakEvent &event)
 {
-    return context_.allowed(*event.getPlayer(), event.getBlock()->getLocation(), Flag::Build);
+    return context_.allowed(*event.getPlayer(), event.getBlock()->getLocation(), Flag::BlockBreak);
 }
 
 bool BlockListener::onPlace(endstone::BlockPlaceEvent &event)
 {
     const auto &block = *event.getBlockPlaced();
-    return context_.allowed(*event.getPlayer(), block.getLocation(), Flag::Build) &&
+    return context_.allowed(*event.getPlayer(), block.getLocation(), Flag::BlockPlace) &&
            context_.chestNeighbors(*event.getPlayer(), block);
 }
 

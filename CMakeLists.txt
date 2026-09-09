@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.29)
-project(dimenguard VERSION 0.1.0 LANGUAGES C CXX)
+project(dimenguard VERSION 0.2.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -37,6 +37,8 @@ add_library(dimenguard_core STATIC
         src/region/region_index.cpp
         src/region/protection_policy.cpp
         src/region/transition_policy.cpp
+        src/rules/block_rules.cpp
+        src/rules/damage_rules.cpp
 )
 target_include_directories(dimenguard_core PUBLIC include)
 target_compile_features(dimenguard_core PUBLIC cxx_std_20)
@@ -107,6 +109,8 @@ if (DIMENGUARD_BUILD_PLUGIN)
             src/listener/explosion_listener.cpp
             src/listener/mob_listener.cpp
             src/listener/player_movement_listener.cpp
+            src/listener/item_listener.cpp
+            src/listener/player_activity_listener.cpp
             src/protection/protection_context.cpp)
     target_include_directories(dimenguard PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
     target_link_libraries(dimenguard PRIVATE dimenguard_services)
@@ -122,7 +126,8 @@ if (BUILD_TESTING)
     FetchContent_MakeAvailable(googletest)
     add_executable(dimenguard_tests tests/region_test.cpp tests/storage_test.cpp tests/service_test.cpp
             tests/presentation_test.cpp tests/selection_test.cpp tests/coordinates_test.cpp tests/command_test.cpp
-            tests/sqlite_test.cpp tests/protocol_test.cpp tests/world_policy_test.cpp)
+            tests/sqlite_test.cpp tests/protocol_test.cpp tests/world_policy_test.cpp tests/flag_fallback_test.cpp
+            tests/rules_test.cpp)
     target_link_libraries(dimenguard_tests PRIVATE dimenguard_services GTest::gtest_main)
     dimenguard_warnings(dimenguard_tests)
     include(GoogleTest)

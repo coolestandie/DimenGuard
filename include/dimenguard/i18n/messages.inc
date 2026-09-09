@@ -12,6 +12,7 @@ DG_MESSAGE(HelpList, "Browse this dimension.", "Consulta esta dimensión.")
 DG_MESSAGE(HelpInfo, "View bounds and rules.", "Consulta límites y reglas.")
 DG_MESSAGE(HelpPriority, "Resolve overlapping regions.", "Resuelve regiones superpuestas.")
 DG_MESSAGE(HelpFlag, "View or change flags.", "Consulta o cambia flags.")
+DG_MESSAGE(HelpFlags, "Browse available flags by page.", "Consulta las flags por página.")
 DG_MESSAGE(HelpTrust, "Trust an online player.", "Autoriza a un jugador conectado.")
 DG_MESSAGE(HelpUntrust, "Remove an online member.", "Retira a un miembro conectado.")
 DG_MESSAGE(HelpShow, "Open this command guide.", "Abre esta guía de comandos.")
@@ -48,6 +49,11 @@ DG_MESSAGE(
     "{0} | {1} | prioridad {2}\nLímites: ({3}, {4}, {5}) a ({6}, {7}, {8})\nUUID del propietario: {9} | miembros: {10}")
 DG_MESSAGE(FlagInfo, "{0}: {1}", "{0}: {1}")
 DG_MESSAGE(FlagsAvailable, "Available flags", "Flags disponibles")
+DG_MESSAGE(FlagsPage, "{0} (page {1}/{2}, {3} flags)", "{0} (página {1}/{2}, {3} flags)")
+DG_MESSAGE(FlagScopePlayer, "Player actions", "Acciones de jugadores")
+DG_MESSAGE(FlagScopeEnvironment, "World and actor rules", "Reglas del mundo y entidades")
+DG_MESSAGE(FlagScopeTransition, "Movement", "Movimiento")
+DG_MESSAGE(FlagNavigation, "Browse: {0}", "Consulta: {0}")
 DG_MESSAGE(FlagBuildDescription, "Player block breaking, placement and supported bucket actions.",
            "Rotura y colocación de bloques por jugadores y usos compatibles de cubetas.")
 DG_MESSAGE(FlagInteractDescription, "Supported right-click block and actor interactions.",
@@ -73,16 +79,46 @@ DG_MESSAGE(FlagEntryDescription, "Entering on reported moves/teleports; portal c
            "Entrada por movimientos/teletransportes registrados; portales parciales.")
 DG_MESSAGE(FlagExitDescription, "Leaving on reported moves/teleports; portal coverage is incomplete.",
            "Salida por movimientos/teletransportes registrados; portales parciales.")
-DG_MESSAGE(FlagDefaults, "Defaults: build/interact/container-access require membership; all other flags allow.",
-           "Por defecto: build/interact/container-access exigen membresía; las demás flags permiten.")
+DG_MESSAGE(FlagBlockBreakDescription, "Player block breaking; falls back to build.",
+           "Rotura de bloques por jugadores; hereda build.")
+DG_MESSAGE(FlagBlockPlaceDescription, "Player block placement; falls back to build.",
+           "Colocación de bloques por jugadores; hereda build.")
+DG_MESSAGE(FlagUseDescription, "Supported block use; falls back to interact.",
+           "Uso compatible de bloques; hereda interact.")
+DG_MESSAGE(FlagUseAnvilDescription, "Opening supported anvils; falls back to use.",
+           "Apertura de yunques compatibles; hereda use.")
+DG_MESSAGE(FlagSleepDescription, "Bed entry; inherits interact, which must also allow the click.",
+           "Acostarse; hereda interact y también requiere permitir el clic.")
+DG_MESSAGE(FlagItemDropDescription, "Active player item drops; excludes death drops.",
+           "Objetos soltados por jugadores vivos; excluye muertes.")
+DG_MESSAGE(FlagItemPickupDescription, "Reported player and mob pickup; checks both endpoints.",
+           "Recogida registrada por jugadores y mobs; revisa ambos extremos.")
+DG_MESSAGE(FlagSendChatDescription, "Player chat reported by this server.",
+           "Chat de jugadores registrado por este servidor.")
+DG_MESSAGE(FlagWaterFlowDescription, "Reported water flow; falls back to fluid-flow.",
+           "Flujo de agua registrado; hereda fluid-flow.")
+DG_MESSAGE(FlagLavaFlowDescription, "Reported lava flow; falls back to fluid-flow.",
+           "Flujo de lava registrado; hereda fluid-flow.")
+DG_MESSAGE(FlagFallDamageDescription, "Reported fall damage to mobs and players.",
+           "Daño de caída registrado en mobs y jugadores.")
+DG_MESSAGE(FlagFireworkDamageDescription, "Reported firework damage to mobs and players.",
+           "Daño de fuegos artificiales registrado en mobs y jugadores.")
+DG_MESSAGE(FlagDefaults, "Defaults: build/interact/container-access require membership.",
+           "Por defecto: build/interact/container-access exigen membresía.")
+DG_MESSAGE(FlagFallbacks, "Unset granular flags follow build, interact, use or fluid-flow.",
+           "Las flags específicas sin valor heredan build, interact, use o fluid-flow.")
 DG_MESSAGE(FlagSyntax, "Usage: {0}", "Uso: {0}")
 DG_MESSAGE(FlagExample, "Example: /dg flag spawn pvp deny", "Ejemplo: /dg flag spawn pvp deny")
 DG_MESSAGE(RegionFlags, "Region '{0}': stored flags", "Región '{0}': flags guardadas")
+DG_MESSAGE(FlagInvincibleDescription, "allow blocks reported player damage; default deny.",
+           "allow bloquea daño recibido por jugadores; por defecto deny.")
+DG_MESSAGE(FlagImmunityDefault, "Other flags default to allow; invincible uses deny (no immunity).",
+           "Las demás usan allow por defecto; invincible usa deny (sin inmunidad).")
 DG_MESSAGE(FlagInheritance, "inherit follows overlapping regions and default rules.",
            "inherit consulta las regiones superpuestas y las reglas predeterminadas.")
 DG_MESSAGE(FlagSet, "Region '{0}': {1} = {2}.", "Región '{0}': {1} = {2}.")
-DG_MESSAGE(InvalidFlag, "Unknown flag or state. Use /dg flag to view the available options.",
-           "Flag o estado desconocido. Usa /dg flag para ver las opciones disponibles.")
+DG_MESSAGE(InvalidFlag, "Unknown flag or state. Use /dg flags to view the available options.",
+           "Flag o estado desconocido. Usa /dg flags para ver las opciones disponibles.")
 DG_MESSAGE(PrioritySet, "Region '{0}' priority set to {1}.", "Prioridad de la región '{0}' establecida en {1}.")
 DG_MESSAGE(PlayerNotFound, "Choose one online player by name.", "Elige a un jugador conectado por su nombre.")
 DG_MESSAGE(MemberSet, "Region '{0}': membership updated for {1}.", "Región '{0}': membresía actualizada para {1}.")

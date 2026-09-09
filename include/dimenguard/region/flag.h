@@ -19,6 +19,19 @@ enum class Flag {
     MobDamage,
     Entry,
     Exit,
+    BlockBreak,
+    BlockPlace,
+    Use,
+    UseAnvil,
+    Sleep,
+    ItemDrop,
+    ItemPickup,
+    SendChat,
+    WaterFlow,
+    LavaFlow,
+    FallDamage,
+    FireworkDamage,
+    Invincible,
 };
 
 enum class FlagState {
@@ -33,12 +46,14 @@ enum class FlagScope {
 };
 enum class FlagDefault {
     Members,
-    Allow
+    Allow,
+    Deny
 };
 
 [[nodiscard]] std::string_view flagName(Flag flag);
 [[nodiscard]] FlagScope flagScope(Flag flag);
 [[nodiscard]] FlagDefault flagDefault(Flag flag);
+[[nodiscard]] std::optional<Flag> flagFallback(Flag flag);
 [[nodiscard]] std::span<const Flag> supportedFlags();
 [[nodiscard]] std::optional<Flag> parseFlag(std::string_view name);
 [[nodiscard]] std::string_view stateName(FlagState state);

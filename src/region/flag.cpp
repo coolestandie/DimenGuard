@@ -11,6 +11,7 @@ struct FlagDefinition {
     std::string_view name;
     FlagScope scope;
     FlagDefault fallback;
+    std::optional<Flag> aggregate = std::nullopt;
 };
 constexpr std::array definitions{
     FlagDefinition{Flag::Build, "build", FlagScope::Player, FlagDefault::Members},
@@ -26,6 +27,19 @@ constexpr std::array definitions{
     FlagDefinition{Flag::MobDamage, "mob-damage", FlagScope::Environment, FlagDefault::Allow},
     FlagDefinition{Flag::Entry, "entry", FlagScope::Transition, FlagDefault::Allow},
     FlagDefinition{Flag::Exit, "exit", FlagScope::Transition, FlagDefault::Allow},
+    FlagDefinition{Flag::BlockBreak, "block-break", FlagScope::Player, FlagDefault::Members, Flag::Build},
+    FlagDefinition{Flag::BlockPlace, "block-place", FlagScope::Player, FlagDefault::Members, Flag::Build},
+    FlagDefinition{Flag::Use, "use", FlagScope::Player, FlagDefault::Members, Flag::Interact},
+    FlagDefinition{Flag::UseAnvil, "use-anvil", FlagScope::Player, FlagDefault::Members, Flag::Use},
+    FlagDefinition{Flag::Sleep, "sleep", FlagScope::Player, FlagDefault::Members, Flag::Interact},
+    FlagDefinition{Flag::ItemDrop, "item-drop", FlagScope::Player, FlagDefault::Allow},
+    FlagDefinition{Flag::ItemPickup, "item-pickup", FlagScope::Environment, FlagDefault::Allow},
+    FlagDefinition{Flag::SendChat, "send-chat", FlagScope::Player, FlagDefault::Allow},
+    FlagDefinition{Flag::WaterFlow, "water-flow", FlagScope::Environment, FlagDefault::Allow, Flag::FluidFlow},
+    FlagDefinition{Flag::LavaFlow, "lava-flow", FlagScope::Environment, FlagDefault::Allow, Flag::FluidFlow},
+    FlagDefinition{Flag::FallDamage, "fall-damage", FlagScope::Environment, FlagDefault::Allow},
+    FlagDefinition{Flag::FireworkDamage, "firework-damage", FlagScope::Environment, FlagDefault::Allow},
+    FlagDefinition{Flag::Invincible, "invincible", FlagScope::Environment, FlagDefault::Deny},
 };
 constexpr std::array state_names{
     std::pair{FlagState::Inherit, std::string_view{"inherit"}},
@@ -39,6 +53,16 @@ constexpr auto flags = [] {
     }
     return values;
 }();
+static_assert([] {
+    for (std::size_t index = 0; index < definitions.size(); ++index) {
+        const auto &entry = definitions[index];
+        if (static_cast<std::size_t>(entry.flag) != index ||
+            (entry.aggregate && static_cast<std::size_t>(*entry.aggregate) >= index)) {
+            return false;
+        }
+    }
+    return true;
+}());
 constexpr auto states = [] {
     std::array<FlagState, state_names.size()> values{};
     for (std::size_t index = 0; index < values.size(); ++index) {
@@ -48,12 +72,11 @@ constexpr auto states = [] {
 }();
 const FlagDefinition &definition(Flag flag)
 {
-    for (const auto &entry : definitions) {
-        if (entry.flag == flag) {
-            return entry;
-        }
+    const auto index = static_cast<std::size_t>(flag);
+    if (index >= definitions.size()) {
+        throw std::invalid_argument("Unknown region flag");
     }
-    throw std::invalid_argument("Unknown region flag");
+    return definitions[index];
 }
 }
 std::string_view flagName(Flag flag)
@@ -67,6 +90,10 @@ FlagScope flagScope(Flag flag)
 FlagDefault flagDefault(Flag flag)
 {
     return definition(flag).fallback;
+}
+std::optional<Flag> flagFallback(Flag flag)
+{
+    return definition(flag).aggregate;
 }
 std::span<const Flag> supportedFlags()
 {

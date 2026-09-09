@@ -1,6 +1,7 @@
 #include "dimenguard/listener/world_block_listener.h"
 
 #include "dimenguard/protection/protection_context.h"
+#include "dimenguard/rules/block_rules.h"
 
 #include <endstone/block/block.h>
 #include <endstone/event/block/block_form_event.h>
@@ -20,8 +21,9 @@ void WorldBlockListener::registerEvents()
 
 bool WorldBlockListener::onFlow(endstone::BlockFromToEvent &event)
 {
-    return context_.allowed(event.getBlock()->getLocation(), Flag::FluidFlow) &&
-           context_.allowed(event.getToBlock().getLocation(), Flag::FluidFlow);
+    const auto type = event.getBlock()->getType().getId();
+    const auto flag = fluidFlowFlag(type.getNamespace(), type.getKey());
+    return context_.allowedAtBoth(event.getBlock()->getLocation(), event.getToBlock().getLocation(), flag);
 }
 
 bool WorldBlockListener::onForm(endstone::BlockFormEvent &event)

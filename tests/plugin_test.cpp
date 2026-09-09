@@ -31,7 +31,7 @@ TEST_F(PluginContractTest, EntryPointConstructsDisabledPluginWithPersonalIdentit
     EXPECT_FALSE(plugin_->isEnabled());
     const auto &description = plugin_->getDescription();
     EXPECT_EQ(description.getName(), "dimenguard");
-    EXPECT_EQ(description.getVersion(), "0.1.0");
+    EXPECT_EQ(description.getVersion(), "0.2.0");
     EXPECT_EQ(description.getAPIVersion(), ENDSTONE_API_VERSION);
     EXPECT_EQ(description.getAuthors(), std::vector<std::string>{"coolestandie"});
     EXPECT_TRUE(description.getContributors().empty());
@@ -50,7 +50,7 @@ TEST_F(PluginContractTest, CommandMetadataPreservesAliasAndPublicEntryPermission
     auto expected_usages = nativeUsages();
     std::ranges::sort(actual_usages);
     std::ranges::sort(expected_usages);
-    ASSERT_EQ(actual_usages.size(), 9);
+    ASSERT_EQ(actual_usages.size(), 10);
     EXPECT_EQ(actual_usages, expected_usages);
     for (const auto &usage : actual_usages) {
         EXPECT_EQ(usage.find("argument1"), std::string::npos);

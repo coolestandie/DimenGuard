@@ -3,6 +3,7 @@
 #include "dimenguard/command/handlers.h"
 #include "dimenguard/command/parse.h"
 #include "dimenguard/presentation/flag_panel.h"
+#include "dimenguard/presentation/panel.h"
 
 #include <algorithm>
 namespace dimenguard {
@@ -15,12 +16,11 @@ void listRegions(CommandContext &context, endstone::Player &player, std::span<co
     const auto dimension = dimensionKey(*player.getDimension());
     const auto regions = context.service().getRegions().inDimension(dimension);
     constexpr std::size_t page_size = 10;
-    const auto pages = std::max(std::size_t{1}, (regions.size() + page_size - 1) / page_size);
-    requireArgument(static_cast<std::size_t>(*page) <= pages, Message::InvalidPage);
+    const auto slice = paginate(regions.size(), static_cast<std::size_t>(*page), page_size);
+    requireArgument(slice.has_value(), Message::InvalidPage);
     auto &messages = context.messages();
-    messages.send(player, Message::List, dimension.dimension, regions.size(), *page, pages);
-    const auto start = static_cast<std::size_t>(*page - 1) * page_size;
-    for (auto i = start; i < std::min(start + page_size, regions.size()); ++i) {
+    messages.send(player, Message::List, dimension.dimension, regions.size(), *page, slice->page_count);
+    for (auto i = slice->offset; i < slice->offset + slice->count; ++i) {
         messages.send(player, Message::ListItem, regions[i]->key.name, regions[i]->priority);
     }
 }

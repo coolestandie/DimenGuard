@@ -5,6 +5,7 @@
 #include <chrono>
 #include <endstone/plugin/plugin.h>
 #include <exception>
+#include <optional>
 #include <string_view>
 #include <type_traits>
 
@@ -23,6 +24,10 @@ public:
     explicit ProtectionContext(DimenGuardPlugin &plugin);
     [[nodiscard]] bool allowed(endstone::Player &player, const endstone::Location &location, Flag flag);
     [[nodiscard]] bool allowed(const endstone::Location &location, Flag flag);
+    [[nodiscard]] bool permitsDamage(const endstone::Location &location, bool player, std::optional<Flag> damage_flag);
+    [[nodiscard]] bool allowedAtBoth(endstone::Player &player, const endstone::Location &first,
+                                     const endstone::Location &second, Flag flag);
+    [[nodiscard]] bool allowedAtBoth(const endstone::Location &first, const endstone::Location &second, Flag flag);
     [[nodiscard]] bool allowedTransition(endstone::Player &player, const endstone::Location &from,
                                          const endstone::Location &to);
     [[nodiscard]] bool chestNeighbors(endstone::Player &player, const endstone::Block &block);

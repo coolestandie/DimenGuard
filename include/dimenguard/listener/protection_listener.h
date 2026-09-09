@@ -3,7 +3,9 @@
 #include "dimenguard/listener/actor_listener.h"
 #include "dimenguard/listener/block_listener.h"
 #include "dimenguard/listener/explosion_listener.h"
+#include "dimenguard/listener/item_listener.h"
 #include "dimenguard/listener/mob_listener.h"
+#include "dimenguard/listener/player_activity_listener.h"
 #include "dimenguard/listener/player_interaction_listener.h"
 #include "dimenguard/listener/player_movement_listener.h"
 #include "dimenguard/listener/player_session_listener.h"
@@ -29,6 +31,8 @@ private:
     ExplosionListener explosions_;
     MobListener mobs_;
     PlayerMovementListener movements_;
+    ItemListener items_;
+    PlayerActivityListener player_activities_;
 };
 
 }

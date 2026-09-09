@@ -2,11 +2,22 @@
 
 #include "dimenguard/presentation/theme.h"
 
+#include <cstddef>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace dimenguard {
+
+struct PageSlice {
+    std::size_t offset;
+    std::size_t count;
+    std::size_t page;
+    std::size_t page_count;
+};
+
+[[nodiscard]] std::optional<PageSlice> paginate(std::size_t total_count, std::size_t page, std::size_t page_size);
 
 enum class PanelStyle {
     Framed,

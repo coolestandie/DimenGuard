@@ -1,5 +1,6 @@
 #include "dimenguard/presentation/panel.h"
 
+#include <algorithm>
 #include <format>
 #include <utility>
 
@@ -11,6 +12,19 @@ std::string panelRule()
     return std::format("{}------------------------------------------{}", Theme::DarkGray, Theme::Reset);
 }
 
+}
+
+std::optional<PageSlice> paginate(std::size_t total_count, std::size_t page, std::size_t page_size)
+{
+    if (page == 0 || page_size == 0) {
+        return std::nullopt;
+    }
+    const auto page_count = total_count == 0 ? 1 : (total_count - 1) / page_size + 1;
+    if (page > page_count) {
+        return std::nullopt;
+    }
+    const auto offset = (page - 1) * page_size;
+    return PageSlice{offset, std::min(page_size, total_count - offset), page, page_count};
 }
 
 PanelBuilder::PanelBuilder(std::string_view title, PanelStyle style) : style_(style)

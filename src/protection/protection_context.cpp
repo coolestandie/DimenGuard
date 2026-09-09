@@ -54,6 +54,32 @@ bool ProtectionContext::allowed(const endstone::Location &location, Flag flag)
     return service->getRegions().isEnvironmentAllowed(targetDimension(location), blockPosition(location), flag);
 }
 
+bool ProtectionContext::permitsDamage(const endstone::Location &location, bool player, std::optional<Flag> damage_flag)
+{
+    const auto *service = plugin_.getService();
+    if (!service) {
+        return false;
+    }
+    const auto dimension = targetDimension(location);
+    const auto position = blockPosition(location);
+    const auto &regions = service->getRegions();
+    if (player && regions.isEnvironmentAllowed(dimension, position, Flag::Invincible)) {
+        return false;
+    }
+    return !damage_flag || regions.isEnvironmentAllowed(dimension, position, *damage_flag);
+}
+
+bool ProtectionContext::allowedAtBoth(endstone::Player &player, const endstone::Location &first,
+                                      const endstone::Location &second, Flag flag)
+{
+    return allowed(player, first, flag) && allowed(player, second, flag);
+}
+
+bool ProtectionContext::allowedAtBoth(const endstone::Location &first, const endstone::Location &second, Flag flag)
+{
+    return allowed(first, flag) && allowed(second, flag);
+}
+
 bool ProtectionContext::allowedTransition(endstone::Player &player, const endstone::Location &from,
                                           const endstone::Location &to)
 {

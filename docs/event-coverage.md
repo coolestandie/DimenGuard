@@ -2,17 +2,50 @@
 
 This is a static source audit, performed on 2026-09-08 against Endstone API 0.12.0, checkout `2572cd304b5ca2d094e02a1b2f969f7632ea44f6`. No Bedrock server was started for this audit. A hook found in source is evidence of an intended event path, not a successful runtime protection test or a guarantee about every Bedrock interaction.
 
+A source comparison with the unmodified upstream pin
+`46eff9f125f52eac76472d84339ead8fbf51fcd2` found no differences in the 14 checked flag-hook/damage
+files or the complete `include/endstone/event` tree. Those files cover script gameplay/chat,
+player/packet, bucket, cauldron, armor-stand, liquid/leaf and damage-source paths. This establishes
+equivalence of those audited routes only, **not the whole SDK or binary ABI**: the fork's expanded
+`Dimension` interface differs, so public and custom-fork DLLs still require separate compatible builds.
+
 Paths below are relative to the Endstone SDK repository, not DimenGuard; `bedrock_hooks/` abbreviates `src/endstone/runtime/bedrock_hooks/`. The integration contracts describe the implemented public-event adapters. Native hooks remain outside this plugin.
+
+## Release-candidate scope: 26 state flags
+
+The 0.2.0 public-preview candidate implements the following flags. None has completed the
+gameplay acceptance checklist for this candidate; this is not complete WorldGuard protection.
+
+| Family | Implemented flags |
+| --- | --- |
+| Existing player rules | `build`, `interact`, `container-access`, `pvp` |
+| Granular player actions | `block-break`, `block-place`, `use`, `use-anvil`, `sleep` |
+| Items and chat | `item-drop`, `item-pickup`, `send-chat` |
+| World and mobs | `explosions`, `fluid-flow`, `water-flow`, `lava-flow`, `block-form`, `leaf-decay`, `actor-griefing`, `mob-spawning`, `mob-damage` |
+| Damage | `fall-damage`, `firework-damage`, `invincible` |
+| Reported transitions | `entry`, `exit` |
+
+Granular fallbacks are `block-break`/`block-place` to `build`, `use`/`sleep` to `interact`,
+`use-anvil` to `use`, and `water-flow`/`lava-flow` to `fluid-flow`. The resolver first considers
+explicit values for the requested flag across priority tiers, then follows its aggregate only
+if none decides. An explicit granular decision can therefore override an aggregate in another
+priority tier. Setting the granular flag to `inherit` restores aggregate resolution.
+
+`build`, `interact` and `container-access` retain membership defaults. Independent flags default
+to allow **except `invincible`, which defaults to deny**. Its value enables or disables an
+immunity feature, rather than directly permitting damage. See the damage contract below.
+Typed strings/sets/numbers/locations, greetings and advanced session behavior remain future
+work in [flag-roadmap.md](flag-roadmap.md), not additional working flags.
 
 ## World and movement adapters
 
-These nine additional state flags are implemented but not yet accepted in-game. They default
-to allow so upgrading does not silently disable autonomous world behavior in existing regions.
+These original world/transition rules remain implemented but not yet accepted in-game. They
+default to allow; granular liquid rules retain their aggregate when not explicitly configured.
 
 | Flag | Concrete source path | Implemented scope and remaining gap |
 | --- | --- | --- |
 | `explosions` | `bedrock_hooks/script_block_gameplay_handler.cpp`, block/actor explosion handlers; `script_actor_gameplay_handler.cpp`, before-hurt | Check origin and each exposed affected block; cancel the whole explosion on denial. Also check victims of `block_explosion` and `entity_explosion` damage. Secondary effects/knockback are not guaranteed. |
-| `fluid-flow` | `bedrock_hooks/liquid_block.cpp`, `_trySpreadTo` | Check both from/to blocks. Instant-ticking paths bypass this hook. |
+| `fluid-flow`, `water-flow`, `lava-flow` | `bedrock_hooks/liquid_block.cpp`, `_trySpreadTo` | Classify the source block's exact namespace/type, then check both from/to blocks. Vanilla still/flowing water and lava select their granular flag; unknown/custom types select `fluid-flow`. Instant-ticking paths bypass this hook. |
 | `block-form` | `bedrock_hooks/liquid_block.cpp`, `_solidify` | Lava solidification into cobblestone, obsidian and basalt. Header examples for snow/ice are not evidence of additional firing paths. |
 | `leaf-decay` | `bedrock_hooks/leaves_block.cpp`, `_die` | Cancel the leaf-decay path before drops/removal. |
 | `actor-griefing` | `bedrock_hooks/script_actor_gameplay_handler.cpp`, `ActorGriefingBlockEvent` | Check exposed target block. Falling blocks and sheep grass consumption are excluded; resulting block state is absent. |
@@ -21,9 +54,10 @@ to allow so upgrading does not silently disable autonomous world behavior in exi
 | `entry`, `exit` | `bedrock_hooks/packet.cpp`, move threshold; `bedrock_hooks/player.cpp`, same-dimension teleport | Resolve changed region sets at reported from/to locations, preserving cancellations. Small movements may not fire. Dimension-change and respawn are after-events, and cross-dimension teleport bypasses the before-event. No complete exclusion or rollback is claimed. |
 
 The shared environmental resolver accepts only environmental flags and has no player identity
-or permission bypass. The move adapter skips unchanged block coordinates/dimension, but does
-not infer that all movement was reported. Actual-position greetings and advanced session rules
-belong to the next planned expansion.
+or permission bypass. `item-pickup` also has a player adapter, which supplies that player's
+explicit bypass; autonomous pickup has no such identity. The move adapter skips unchanged
+block coordinates/dimension, but does not infer that all movement was reported. Actual-position
+greetings and advanced session rules belong to the next planned expansion.
 
 ## Missing contracts
 
@@ -33,6 +67,8 @@ belong to the next planned expansion.
 - Inventory open lacks holder/location, and no concrete inventory click/drag transaction event
   was found. Opening guards do not protect ongoing or automated transfers.
 - Bed/door multi-block placement exposes one target, not every affected block.
+- Health-regeneration causes, current-hunger writes, precise potion sources and complete portal
+  transitions are unavailable through the required public contracts in this checkout.
 
 ## Live command suggestions
 
@@ -44,21 +80,62 @@ unsupported or conflicting packets pass through without cancellation. Unsupporte
 retain native command parsing with less detailed hints. Offline codec tests do not prove client
 autocomplete display; that remains part of final acceptance.
 
+Live region names are supplied only to administrators and only for their current level/dimension.
+The public `/dg flags [page]` path has its own distinct root and optional native integer; discovery
+shows six descriptions per page, with 26 flags across five pages. Non-administrators do not receive
+mutation instructions in the help/catalog panels. Endstone's native fallback may still display
+administrative subcommand syntax under `dg`; the server-side permission checks remain authoritative.
+
 ## Event contracts
 
 | Public event | Hook evidence | Protection decision and limits |
 | --- | --- | --- |
-| `BlockBreakEvent` | `src/endstone/runtime/bedrock_hooks/script_block_gameplay_handler.cpp`, `handleEvent(BlockTryDestroyByPlayerEvent&)` and `ScriptBlockGameplayHandler::handleEvent4` | Query `build` at `getBlock()` using `getPlayer()`. Cancellation returns `CoordinatorResult::Cancel`. This covers the player destruction path; explosions, commands, pistons, fluids and plugin block edits are different paths. |
-| `BlockPlaceEvent` | Same file, `handleEvent(const BlockTryPlaceByPlayerEvent&)` and `handleEvent2` | Query `build` at `getBlockPlaced()`, not only `getBlockAgainst()` or the player's location. The target is a pre-mutation snapshot with the permutation about to be placed. Secondary blocks of doors, beds and similar placements require boundary tests; the event exposes one target, not an affected-block list. |
+| `BlockBreakEvent` | `src/endstone/runtime/bedrock_hooks/script_block_gameplay_handler.cpp`, `handleEvent(BlockTryDestroyByPlayerEvent&)` and `ScriptBlockGameplayHandler::handleEvent4` | Query `block-break`, falling back to `build`, at `getBlock()` using `getPlayer()`. Cancellation returns `CoordinatorResult::Cancel`. This covers the player destruction path; explosions, commands, pistons, fluids and plugin block edits are different paths. |
+| `BlockPlaceEvent` | Same file, `handleEvent(const BlockTryPlaceByPlayerEvent&)` and `handleEvent2` | Query `block-place`, falling back to `build`, at `getBlockPlaced()`, not only `getBlockAgainst()` or the player's location. The target is a pre-mutation snapshot with the permutation about to be placed. Secondary blocks of doors, beds and similar placements require boundary tests; the event exposes one target, not an affected-block list. Conservative neighboring-chest checks still apply. |
 | `PlayerBucketFillEvent` | `bedrock_hooks/bucket.cpp`, `BucketItem::_useOn`; `bedrock_hooks/cauldron.cpp`, `CauldronBlock::use`; `bedrock_hooks/script_player_gameplay_handler.cpp`, entity interaction before-event | Query `build` at the affected `getBlock()` and handle a null result explicitly. `getBlockClicked()` is available as a conservative fallback. The current paths cover recognized source liquids, powder snow, supported cauldron operations and milking supported animals. Later fluid spread and automation are separate operations. |
 | `PlayerBucketEmptyEvent` | `bedrock_hooks/bucket.cpp`, `BucketItem::_useOn`; `bedrock_hooks/cauldron.cpp`, `CauldronBlock::use` | Use `getBlock()` for the affected position. The hook resolves waterlogging versus adjacent placement; recomputing the destination from the clicked face would discard that work. Test water, lava, powder snow and creature buckets at region edges. |
-| `PlayerInteractEvent` | `bedrock_hooks/script_player_gameplay_handler.cpp`, block before-event; `bedrock_hooks/script_item_gameplay_handler.cpp`, item use; `bedrock_hooks/packet.cpp`, destroy-start and missed swing input | Inspect `getAction()` and the nullable `getBlock()`. For block actions, query the target block. A captured `Container` can select `container-access` for right-clicks; other targeted interactions use `interact`. Left-click destruction should retain the separate `build` decision. Air interactions have no target block; deciding at the player's position is a separate documented policy, not remote target protection. |
+| `PlayerInteractEvent` | `bedrock_hooks/script_player_gameplay_handler.cpp`, block before-event; `bedrock_hooks/script_item_gameplay_handler.cpp`, item use; `bedrock_hooks/packet.cpp`, destroy-start and missed swing input | The adapter handles only `RightClickBlock` with a target. Reviewed vanilla door/trapdoor/gate/button/lever identifiers select `use`; reviewed anvils select `use-anvil`; other targets select `interact`. A captured `Container` additionally requires `container-access` and conservative neighboring-chest checks. Air and left-click events are ignored here; the separate break listener does not establish protection of every left-click mutation. |
 | `PlayerInteractActorEvent` | `bedrock_hooks/script_player_gameplay_handler.cpp`, `handleEvent(const PlayerInteractWithEntityBeforeEvent&)` | Query the relevant action at `getActor()->getLocation()` using `getPlayer()`. Cancellation returns `CoordinatorResult::Cancel`. Actor inventories do not have an exposed inventory-holder mapping; a generic actor interaction guard is not complete inventory transaction protection. |
-| `PlayerArmorStandManipulateEvent` | `bedrock_hooks/armor_stand.cpp` | A distinct event name despite inheriting from `PlayerInteractActorEvent`. If enabled, register a separate listener and call the same actor-policy helper. Do not assume a parent-class listener receives it. |
-| `ActorDamageEvent` | `bedrock_hooks/script_actor_gameplay_handler.cpp`, `handleEvent(ActorBeforeHurtEvent&)` and `handleEvent4` | Victim is `NotNull<Mob>`. For PvP, resolve both the victim and the responsible source as players. `getDamageSource()->getActor()` returns the attributed attacker, including a resolved projectile shooter. `getDamagingActor()` instead returns the direct projectile. Query attacker and victim positions if the policy protects both sides of a region boundary. An unloaded or missing shooter produces a null handle; historical shooter position is not available. Damage cancellation is not proof that every knockback, potion-effect or delayed environmental consequence is suppressed. |
+| `PlayerArmorStandManipulateEvent` | `bedrock_hooks/armor_stand.cpp` | Registered separately despite inheriting from `PlayerInteractActorEvent`; delegates to the shared actor interaction decision. A parent-class registration alone would not receive it. |
+| `PlayerBedEnterEvent` | `bedrock_hooks/player.cpp`, `Player::startSleepInBed` | Query `sleep` at `getBed()`, falling back to `interact`. Cancellation returns before sleeping. The hook fires only for a valid sleep attempt; the earlier bed right-click must also pass `interact`. It is not the route for exploding beds. |
+| `PlayerDropItemEvent` | `bedrock_hooks/player.cpp`, `Player::drop` | Query `item-drop` at the player's location. Cancellation returns false before the native drop, for alive initialized players. Death drops, XP drops and other actors' drops are not covered. |
+| `PlayerPickupItemEvent`, `PlayerPickupArrowEvent` | `bedrock_hooks/player.cpp`, `Player::take` | Query `item-pickup` at both the player and the actual item/arrow locations, using the player's identity/bypass. The arrow event also describes thrown-trident pickup. Cancellation prevents the reported take; it is not a hopper/inventory-transfer event. |
+| `ActorPickupItemEvent` | `bedrock_hooks/script_actor_gameplay_handler.cpp`, `ActorBeforeAcquireItemEvent` | The native filter selects non-player actors acquiring an item through `PickedUp`. Query `item-pickup` at both actor and item positions without a player identity or bypass. Other acquisition methods are separate. |
+| `PlayerChatEvent` | `bedrock_hooks/script_server_network_event_handler.cpp`, `ChatEvent` | Query `send-chat` at the sender's location before native chat dispatch. Does not implement receive filtering, proxy chat, direct messages or arbitrary plugin broadcasts. |
+| `ActorDamageEvent` | `bedrock_hooks/script_actor_gameplay_handler.cpp`, `handleEvent(ActorBeforeHurtEvent&)` and `handleEvent4` | Victim is `NotNull<Mob>`. Apply the player-only `invincible` feature and recognized damage-cause flag at the victim; separate listeners retain explosion and mob-damage rules. For PvP, `getDamageSource()->getActor()` identifies the responsible player, including a resolved projectile shooter; `getDamagingActor()` is the direct actor/projectile instead. Check attacker and victim positions using the attacker's identity. Missing/unloaded shooters and historical shooter positions cannot be reconstructed. |
 | `InventoryOpenEvent` | `bedrock_hooks/script_player_gameplay_handler.cpp`, `handleEvent(const PlayerOpenContainerEvent&)` | The hook knows `block_pos` but exposes only `Inventory&` and player. The public API has no holder or location accessor. A precise region decision cannot be made from this event alone. The event is dispatched through a void gameplay event, so screen-opening cancellation timing also needs runtime verification. |
 | `InventoryInteractEvent` | Header `include/endstone/event/inventory/inventory_interact_event.h`; no construction or concrete firing path found | This is an abstract base without `ENDSTONE_EVENT` or a `NAME`; it is not a usable concrete listener in this checkout. No public inventory click/drag subclass was found. Do not claim ongoing transaction protection by registering the base. |
 | `PlayerQuitEvent` | `bedrock_hooks/script_player_gameplay_handler.cpp`, disconnect-event handler | Remove transient selection and notification state keyed by `getPlayer()->getUniqueId()`. This is cleanup, not a cancellable protection action. The hook calls the event before disconnecting the Endstone player wrapper. |
+
+## Granular action and damage boundaries
+
+The exact vanilla block and liquid classifiers live in [block_rules.cpp](../src/rules/block_rules.cpp).
+A custom namespace or unknown suffix does not acquire vanilla behavior automatically. `use` is
+not a catch-all item-use flag, nor a physical pressure-plate/trampling event.
+
+`sleep allow` does **not** bypass an earlier `interact deny` on the bed. The plugin deliberately
+retains that separate interaction decision: treating every bed click as a sleep attempt could
+permit a denied bed interaction in Nether/End, where it explodes instead of emitting a valid
+bed-enter event. Public dimension identity alone cannot classify every custom dimension's bed
+behavior. To permit ordinary sleeping, permit the relevant interaction as well as `sleep`.
+
+Likewise, `use-anvil allow` never overrides `container-access` when the clicked block is actually
+exposed as a `Container`. A vanilla anvil's temporary UI must not be assumed to be a persistent
+block container; its supported opening route is the reviewed right-click classifier. Neither
+rule adds ongoing inventory transaction coverage.
+
+[damage_rules.cpp](../src/rules/damage_rules.cpp) selects `fall-damage` only for `fall`, and
+`firework-damage` only for `fireworks`. Similar names such as `falling_block`, `fly_into_wall`,
+`projectile` or generic explosion are not silently included. These cause rules apply to the
+reported `Mob` victim, including players, and do not infer a responsible player's bypass.
+
+`invincible allow` cancels intercepted damage only when the victim is a `Player`. `deny` or an
+unconfigured value adds no immunity; it does not force damage through `pvp`, `mob-damage`,
+`explosions`, `fall-damage` or another plugin's cancellation. Equal-priority deny still wins the
+feature-value tie, disabling only this immunity. No player bypass is used to turn immunity on
+or pierce it. Direct health writes, actor removal, secondary knockback and all potion effects
+are not guaranteed to be intercepted. Storage unavailable at startup still locks intercepted
+damage through the shared failure guard, independently of configured immunity.
 
 ## Inventory and double-chest boundaries
 
@@ -89,12 +166,13 @@ Every item below is pending. Record the exact BDS build, Endstone commit, DimenG
 1. Create a small region with an owner, a member and an outsider. Check `allow`, `deny`, unset defaults, explicit bypass, operator without bypass, equal-priority overlap and a higher-priority region. Repeat at inclusive corners, negative coordinates and matching coordinates in another dimension.
 2. Break and place in survival and creative. Stand outside while targeting inside, and reverse the positions. Test door/bed secondary blocks and neighboring chest placement across the boundary. Check actual server state after reconnecting, not only the immediate client animation.
 3. Fill and empty water, lava and powder-snow buckets; waterlog a block; use a supported creature bucket; fill/empty a cauldron; milk an animal. Confirm target positions, inventory counts and absence of duplicated items after denial.
-4. Interact with doors, buttons, levers, signs, item frames, lecterns, furnaces, shulker boxes and other containers. Confirm which actions select `interact` or `container-access`, and whether denial blocks both the UI and server-side mutation.
+4. Interact with doors, buttons, levers, anvils, signs, item frames, lecterns, furnaces, shulker boxes and other containers. Confirm which actions select `use`, `use-anvil`, `interact` or `container-access`, and whether denial blocks both the UI and server-side mutation.
 5. Open each half of a normal and trapped double chest straddling a region edge. Check all orientations and chunk edges. Place same-type unpaired chests next to a protected chest and record the conservative over-denial behavior.
 6. Interact with mobs, storage actors and armor stands. Verify armor-stand equipment manipulation separately because its concrete event has a different name. Inventory access through an already open, remote or plugin-created UI remains unsupported until a suitable event path is established.
 7. Test melee and projectile PvP with the attacker inside, victim inside and both outside. Verify damage, shooter attribution and knockback separately. Repeat with the shooter disconnected before impact; record the unresolved-attribution limitation. Potion effects and environmental damage are separate checks, not implied by melee success.
 8. Change trust/flags while a container screen is open, and attempt shift transfers, drag actions and automated extraction. Record the current transaction coverage gap; do not label these paths protected by the opening listener.
 9. Reconnect, change locale between English and Spanish, and repeat rapid denied actions. Verify selection cleanup, localization fallback and notification throttling without masking protection decisions.
+10. Execute the granular, sleep, item/chat, immunity and paged-discovery checks in [testing.md](testing.md). Every new action needs its actual event and server outcome recorded; a successful policy unit test does not establish an earlier event stage was permitted.
 
 ## Policy risk review and test strategy
 
