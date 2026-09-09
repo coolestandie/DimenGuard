@@ -5,12 +5,24 @@
 #include <array>
 #include <format>
 #include <stdexcept>
+#include <utility>
 
 namespace dimenguard {
 namespace {
 
 using Section = CommandSection;
 using Kind = ParameterKind;
+
+template <typename Enum, typename Name>
+std::vector<std::string_view> choicesFor(std::span<const Enum> values, Name name)
+{
+    std::vector<std::string_view> choices;
+    choices.reserve(values.size());
+    for (const auto value : values) {
+        choices.push_back(name(value));
+    }
+    return choices;
+}
 
 const auto &definitions()
 {
@@ -32,20 +44,13 @@ const auto &definitions()
                     Message::HelpPriority,
                     true,
                     {{"region", Kind::Word, false, {}}, {"priority", Kind::Integer, false, {}}}},
-        CommandSpec{
-            "flag",
-            Section::Protection,
-            Message::HelpFlag,
-            true,
-            {{"region", Kind::Word, false, {}},
-             {"flag",
-              Kind::Choice,
-              false,
-              {flagName(Flag::Build), flagName(Flag::Interact), flagName(Flag::ContainerAccess), flagName(Flag::Pvp)}},
-             {"state",
-              Kind::Choice,
-              false,
-              {stateName(FlagState::Allow), stateName(FlagState::Deny), stateName(FlagState::Inherit)}}}},
+        CommandSpec{"flag",
+                    Section::Protection,
+                    Message::HelpFlag,
+                    true,
+                    {{"region", Kind::Word, true, {}},
+                     {"flag", Kind::Choice, true, choicesFor(supportedFlags(), flagName)},
+                     {"state", Kind::Choice, true, choicesFor(supportedFlagStates(), stateName)}}},
         CommandSpec{"trust",
                     Section::Protection,
                     Message::HelpTrust,
@@ -88,6 +93,8 @@ std::string_view nativeType(ParameterKind kind)
         return "int";
     case Kind::Player:
         return "player";
+    case Kind::Message:
+        return "message";
     case Kind::Choice:
         break;
     }
@@ -102,6 +109,39 @@ void appendParameter(std::string &usage, std::string_view name, std::string_view
         usage += '(' + joinChoices(choices) + ')';
     }
     usage += std::format("{}{}: {}{}", optional ? '[' : '<', name, type, optional ? ']' : '>');
+}
+
+std::string nativeUsage(std::string_view root, std::span<const CommandParameter> parameters, bool optional_root,
+                        std::size_t index)
+{
+    std::string usage = "/dg";
+    std::size_t argument = 0;
+    const auto enum_type = [&] {
+        return std::format("DimenGuardCommand{}Arg{}", index, argument++);
+    };
+    const std::array values{root};
+    appendParameter(usage, root, enum_type(), optional_root, values);
+    for (const auto &parameter : parameters) {
+        const auto type = parameter.kind == Kind::Choice ? enum_type() : std::string(nativeType(parameter.kind));
+        appendParameter(usage, parameter.name, type, parameter.optional, parameter.choices);
+    }
+    return usage;
+}
+
+std::vector<CommandParameter> regionParameters()
+{
+    std::vector<std::string_view> actions;
+    constexpr std::string_view prefix = "region ";
+    for (const auto &command : definitions()) {
+        if (command.path.starts_with(prefix)) {
+            actions.push_back(command.path.substr(prefix.size()));
+        }
+    }
+    // Endstone creates a separate enum symbol for every declaration, even for repeated
+    // names/values. Bedrock cannot route the shared "region" prefix across those symbols.
+    // Register one action enum and validate each action's arity/types in CommandHandler.
+    // A message tail accepts both names and numbers; Bedrock's str/Id rejects numeric tokens.
+    return {{"action", Kind::Choice, false, std::move(actions)}, {"arguments", Kind::Message, true, {}}};
 }
 
 }  // namespace
@@ -129,28 +169,17 @@ std::vector<std::string> nativeUsages()
     const auto catalog = commandCatalog();
     std::vector<std::string> usages;
     usages.reserve(catalog.size());
+    bool region_registered = false;
     for (std::size_t index = 0; index < catalog.size(); ++index) {
         const auto &command = catalog[index];
-        std::string usage = "/dg";
-        std::size_t argument = 0;
-        // Endstone registers enums independently per usage. Distinct names avoid collisions
-        // when several overloads start with the same literal, such as "region".
-        const auto enum_type = [&] {
-            return std::format("DimenGuardCommand{}Arg{}", index, argument++);
-        };
-        auto path = command.path;
-        while (!path.empty()) {
-            const auto space = path.find(' ');
-            const auto literal = path.substr(0, space);
-            const std::array values{literal};
-            appendParameter(usage, literal, enum_type(), command.optional_path, values);
-            path = space == path.npos ? std::string_view{} : path.substr(space + 1);
+        if (command.path.starts_with("region ")) {
+            if (!region_registered) {
+                usages.push_back(nativeUsage("region", regionParameters(), false, index));
+                region_registered = true;
+            }
+            continue;
         }
-        for (const auto &parameter : command.parameters) {
-            const auto type = parameter.kind == Kind::Choice ? enum_type() : std::string(nativeType(parameter.kind));
-            appendParameter(usage, parameter.name, type, parameter.optional, parameter.choices);
-        }
-        usages.push_back(std::move(usage));
+        usages.push_back(nativeUsage(command.path, command.parameters, command.optional_path, index));
     }
     return usages;
 }

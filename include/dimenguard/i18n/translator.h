@@ -1,6 +1,9 @@
 #pragma once
 
+#include "dimenguard/region/region.h"
+
 #include <format>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -22,6 +25,9 @@ enum class Message {
 [[nodiscard]] Locale parseLocale(std::string_view locale);
 [[nodiscard]] std::string_view messageText(Message message, Locale locale);
 [[nodiscard]] std::vector<std::string> renderHelp(Locale locale, bool can_manage);
+[[nodiscard]] std::vector<std::string> renderFlagCatalog(Locale locale);
+[[nodiscard]] std::vector<std::string> renderRegionFlags(const Region &region, Locale locale,
+                                                         std::optional<Flag> selected = std::nullopt);
 
 template <typename... Args>
 [[nodiscard]] std::string translate(Message message, Locale locale, Args &&...args)

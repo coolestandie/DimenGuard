@@ -5,6 +5,7 @@
 #include <chrono>
 #include <endstone/command/command_sender.h>
 #include <endstone/player.h>
+#include <span>
 #include <string>
 #include <unordered_map>
 
@@ -17,6 +18,7 @@ public:
     void forget(const endstone::Player &player);
     void deny(endstone::Player &player, Message message = Message::Denied);
     void sendHelp(endstone::CommandSender &sender) const;
+    void sendLines(endstone::CommandSender &sender, std::span<const std::string> lines) const;
 
     template <typename... Args>
     void send(endstone::CommandSender &sender, Message message, Args &&...args) const

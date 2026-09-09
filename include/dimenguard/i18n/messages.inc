@@ -12,7 +12,7 @@ DG_MESSAGE(HelpRename, "Change its name.", "Cambia su nombre.")
 DG_MESSAGE(HelpList, "Browse this dimension.", "Consulta esta dimensión.")
 DG_MESSAGE(HelpInfo, "View bounds and rules.", "Consulta límites y reglas.")
 DG_MESSAGE(HelpPriority, "Resolve overlapping regions.", "Resuelve regiones superpuestas.")
-DG_MESSAGE(HelpFlag, "Set allow, deny or inherit.", "Establece allow, deny o inherit.")
+DG_MESSAGE(HelpFlag, "View or change flags.", "Consulta o cambia flags.")
 DG_MESSAGE(HelpTrust, "Trust an online player.", "Autoriza a un jugador conectado.")
 DG_MESSAGE(HelpUntrust, "Remove an online member.", "Retira a un miembro conectado.")
 DG_MESSAGE(HelpShow, "Open this command guide.", "Abre esta guía de comandos.")
@@ -48,9 +48,24 @@ DG_MESSAGE(
     Info, "{0} | {1} | priority {2}\nBounds: ({3}, {4}, {5}) to ({6}, {7}, {8})\nOwner UUID: {9} | members: {10}",
     "{0} | {1} | prioridad {2}\nLímites: ({3}, {4}, {5}) a ({6}, {7}, {8})\nUUID del propietario: {9} | miembros: {10}")
 DG_MESSAGE(FlagInfo, "{0}: {1}", "{0}: {1}")
+DG_MESSAGE(FlagsAvailable, "Available flags", "Flags disponibles")
+DG_MESSAGE(FlagBuildDescription, "Player block breaking, placement and supported bucket actions.",
+           "Rotura y colocación de bloques por jugadores y usos compatibles de cubetas.")
+DG_MESSAGE(FlagInteractDescription, "Supported right-click block and actor interactions.",
+           "Interacciones compatibles con clic derecho en bloques y con entidades.")
+DG_MESSAGE(FlagContainerDescription, "Opening interactions for recognized block containers.",
+           "Interacciones para abrir contenedores de bloques reconocidos.")
+DG_MESSAGE(FlagPvpDescription, "Damage between players when the attacker can be identified.",
+           "Daño entre jugadores cuando se puede identificar al atacante.")
+DG_MESSAGE(FlagStates, "States: {0}.", "Estados: {0}.")
+DG_MESSAGE(FlagSyntax, "Usage: {0}", "Uso: {0}")
+DG_MESSAGE(FlagExample, "Example: /dg flag spawn pvp deny", "Ejemplo: /dg flag spawn pvp deny")
+DG_MESSAGE(RegionFlags, "Region '{0}': stored flags", "Región '{0}': flags guardadas")
+DG_MESSAGE(FlagInheritance, "inherit follows overlapping regions and default rules.",
+           "inherit consulta las regiones superpuestas y las reglas predeterminadas.")
 DG_MESSAGE(FlagSet, "Region '{0}': {1} = {2}.", "Región '{0}': {1} = {2}.")
-DG_MESSAGE(InvalidFlag, "Flags: build, interact, container-access, pvp. States: allow, deny, inherit.",
-           "Flags: build, interact, container-access, pvp. Estados: allow, deny, inherit.")
+DG_MESSAGE(InvalidFlag, "Unknown flag or state. Use /dg flag to view the available options.",
+           "Flag o estado desconocido. Usa /dg flag para ver las opciones disponibles.")
 DG_MESSAGE(PrioritySet, "Region '{0}' priority set to {1}.", "Prioridad de la región '{0}' establecida en {1}.")
 DG_MESSAGE(PlayerNotFound, "Choose one online player by name.", "Elige a un jugador conectado por su nombre.")
 DG_MESSAGE(MemberSet, "Region '{0}': membership updated for {1}.", "Región '{0}': membresía actualizada para {1}.")

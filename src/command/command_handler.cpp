@@ -94,6 +94,10 @@ void CommandHandler::dispatch(endstone::CommandSender &sender, std::span<const s
         messages.send(sender, Message::Reloaded, plugin_.getService()->getRegions().getAll().size());
         return;
     }
+    if (args[0] == "flag") {
+        flags(sender, args.subspan(1));
+        return;
+    }
     require(plugin_.getService() != nullptr, Message::NotReady);
     auto &player = requirePlayer(sender);
     auto &service = *plugin_.getService();
@@ -108,15 +112,11 @@ void CommandHandler::dispatch(endstone::CommandSender &sender, std::span<const s
                       dimension.dimension);
     }
     else if (args[0] == "region") {
-        region(player, args.subspan(1));
-    }
-    else if (args[0] == "flag") {
-        require(args.size() == 4);
-        const auto flag = parseFlag(args[2]);
-        const auto state = parseState(args[3]);
-        require(flag.has_value() && state.has_value(), Message::InvalidFlag);
-        service.setFlag({dimension, args[1]}, *flag, *state);
-        messages.send(player, Message::FlagSet, args[1], args[2], args[3]);
+        require(args.size() >= 2 && args.size() <= 3);
+        auto arguments = parseCommandArguments(args.size() == 3 ? std::string_view(args[2]) : std::string_view{}, 2);
+        require(arguments.has_value());
+        arguments->insert(arguments->begin(), args[1]);
+        region(player, *arguments);
     }
     else if (args[0] == "trust" || args[0] == "untrust") {
         require(args.size() == 3);
@@ -127,6 +127,33 @@ void CommandHandler::dispatch(endstone::CommandSender &sender, std::span<const s
     else {
         throw CommandError(Message::Usage);
     }
+}
+
+void CommandHandler::flags(endstone::CommandSender &sender, std::span<const std::string> args)
+{
+    require(args.size() <= 3);
+    auto &messages = plugin_.getMessenger();
+    const auto locale = messages.getLocale(sender);
+    if (args.empty()) {
+        messages.sendLines(sender, renderFlagCatalog(locale));
+        return;
+    }
+    require(plugin_.getService() != nullptr, Message::NotReady);
+    auto &player = requirePlayer(sender);
+    const auto &region = findRegion(player, args[0]);
+    std::optional<Flag> selected;
+    if (args.size() >= 2) {
+        selected = parseFlag(args[1]);
+        require(selected.has_value(), Message::InvalidFlag);
+    }
+    if (args.size() == 3) {
+        const auto state = parseState(args[2]);
+        require(state.has_value(), Message::InvalidFlag);
+        plugin_.getService()->setFlag(region.key, *selected, *state);
+        messages.send(sender, Message::FlagSet, args[0], args[1], args[2]);
+        return;
+    }
+    messages.sendLines(sender, renderRegionFlags(region, locale, selected));
 }
 
 void CommandHandler::region(endstone::Player &player, std::span<const std::string> args)
@@ -201,18 +228,20 @@ void CommandHandler::listRegions(endstone::Player &player, std::span<const std::
 
 void CommandHandler::showRegion(endstone::Player &player, const std::string &name)
 {
+    const auto &region = findRegion(player, name);
+    const auto &bounds = region.bounds;
+    auto &messages = plugin_.getMessenger();
+    messages.send(player, Message::Info, name, region.key.dimension.dimension, region.priority, bounds.min.x,
+                  bounds.min.y, bounds.min.z, bounds.max.x, bounds.max.y, bounds.max.z, region.owner,
+                  region.members.size());
+    messages.sendLines(player, renderRegionFlags(region, messages.getLocale(player)));
+}
+
+const Region &CommandHandler::findRegion(const endstone::Player &player, const std::string &name) const
+{
     const auto *region = plugin_.getService()->getRegions().find({dimensionKey(*player.getDimension()), name});
     require(region != nullptr, Message::NotFound);
-    const auto &bounds = region->bounds;
-    auto &messages = plugin_.getMessenger();
-    messages.send(player, Message::Info, name, region->key.dimension.dimension, region->priority, bounds.min.x,
-                  bounds.min.y, bounds.min.z, bounds.max.x, bounds.max.y, bounds.max.z, region->owner,
-                  region->members.size());
-    for (const auto flag : {Flag::Build, Flag::Interact, Flag::ContainerAccess, Flag::Pvp}) {
-        const auto found = region->flags.find(flag);
-        messages.send(player, Message::FlagInfo, flagName(flag),
-                      stateName(found == region->flags.end() ? FlagState::Inherit : found->second));
-    }
+    return *region;
 }
 
 endstone::NotNull<endstone::Player> CommandHandler::resolvePlayer(std::string_view argument) const

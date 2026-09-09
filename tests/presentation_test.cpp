@@ -4,6 +4,8 @@
 
 #include <array>
 #include <gtest/gtest.h>
+#include <set>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -134,6 +136,85 @@ TEST(HelpPanel, StaysBoundedAndResetsEveryLine)
             }
         }
     }
+}
+
+TEST(FlagSupport, EnumeratesUniqueNamesThatRoundTripThroughParsers)
+{
+    std::set<std::string_view> flags;
+    ASSERT_EQ(supportedFlags().size(), 4);
+    for (const auto flag : supportedFlags()) {
+        EXPECT_TRUE(flags.insert(flagName(flag)).second);
+        EXPECT_EQ(parseFlag(flagName(flag)), flag);
+    }
+    EXPECT_EQ(flags, (std::set<std::string_view>{"build", "interact", "container-access", "pvp"}));
+    std::set<std::string_view> states;
+    ASSERT_EQ(supportedFlagStates().size(), 3);
+    for (const auto state : supportedFlagStates()) {
+        EXPECT_TRUE(states.insert(stateName(state)).second);
+        EXPECT_EQ(parseState(stateName(state)), state);
+    }
+    EXPECT_EQ(states, (std::set<std::string_view>{"allow", "deny", "inherit"}));
+}
+
+TEST(FlagPresentation, CatalogShowsEveryFlagStatesAndLocalizedUsage)
+{
+    for (const auto locale : {Locale::English, Locale::Spanish}) {
+        const auto lines = renderFlagCatalog(locale);
+        const auto text = plainHelp(lines);
+        EXPECT_EQ(lines.front(), lines.back());
+        EXPECT_NE(text.find(messageText(Message::FlagsAvailable, locale)), text.npos);
+        for (const auto flag : supportedFlags()) {
+            EXPECT_NE(text.find(std::format("{} / ", flagName(flag))), text.npos);
+        }
+        for (const auto state : supportedFlagStates()) {
+            EXPECT_NE(text.find(stateName(state)), text.npos);
+        }
+        EXPECT_NE(text.find("/dg flag spawn pvp deny"), text.npos);
+        EXPECT_NE(text.find(locale == Locale::English ? "Usage:" : "Uso:"), text.npos);
+        for (const auto description : {Message::FlagBuildDescription, Message::FlagInteractDescription,
+                                       Message::FlagContainerDescription, Message::FlagPvpDescription}) {
+            EXPECT_NE(text.find(messageText(description, locale)), text.npos);
+            EXPECT_NE(messageText(description, Locale::English), messageText(description, Locale::Spanish));
+        }
+        for (const auto &line : lines) {
+            EXPECT_TRUE(line.ends_with(Theme::Reset));
+            EXPECT_EQ(line.find('\n'), line.npos);
+        }
+    }
+}
+
+TEST(FlagPresentation, RegionQueriesShowStoredAndInheritedStatesWithoutMutation)
+{
+    Region region;
+    region.key.name = "spawn";
+    region.flags = {{Flag::Build, FlagState::Allow}, {Flag::Pvp, FlagState::Deny}};
+    const auto before = region.flags;
+    for (const auto locale : {Locale::English, Locale::Spanish}) {
+        const auto text = plainHelp(renderRegionFlags(region, locale));
+        EXPECT_NE(text.find("spawn"), text.npos);
+        EXPECT_NE(text.find("build: allow"), text.npos);
+        EXPECT_NE(text.find("pvp: deny"), text.npos);
+        EXPECT_NE(text.find("interact: inherit"), text.npos);
+        EXPECT_NE(text.find("container-access: inherit"), text.npos);
+        EXPECT_NE(text.find(messageText(Message::FlagInheritance, locale)), text.npos);
+        EXPECT_EQ(region.flags, before);
+    }
+}
+
+TEST(FlagPresentation, SingleFlagQueryShowsOnlyRequestedStoredValue)
+{
+    Region region;
+    region.key.name = "spawn";
+    region.flags = {{Flag::Build, FlagState::Allow}, {Flag::Pvp, FlagState::Deny}};
+    const auto before = region.flags;
+    const auto text = plainHelp(renderRegionFlags(region, Locale::English, Flag::Pvp));
+    EXPECT_NE(text.find("pvp: deny"), text.npos);
+    EXPECT_EQ(text.find("build:"), text.npos);
+    EXPECT_EQ(text.find("interact:"), text.npos);
+    EXPECT_EQ(text.find("container-access:"), text.npos);
+    EXPECT_EQ(region.flags, before);
+    EXPECT_THROW(static_cast<void>(renderRegionFlags(region, Locale::English, static_cast<Flag>(999))),
+                 std::invalid_argument);
 }
 
 TEST(CommandParsing, RejectsPartialAndOverflowingIntegers)

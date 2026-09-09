@@ -2,6 +2,7 @@
 
 #include "dimenguard/command/catalog.h"
 
+#include <algorithm>
 #include <array>
 #include <cctype>
 #include <stdexcept>
@@ -18,6 +19,26 @@ constexpr std::array catalog{
 #undef DG_MESSAGE
 };
 static_assert(catalog.size() == static_cast<std::size_t>(Message::Count));
+
+std::string panelRule()
+{
+    return std::format("{}------------------------------------------{}", Theme::DarkGray, Theme::Reset);
+}
+
+Message flagDescription(Flag flag)
+{
+    switch (flag) {
+    case Flag::Build:
+        return Message::FlagBuildDescription;
+    case Flag::Interact:
+        return Message::FlagInteractDescription;
+    case Flag::ContainerAccess:
+        return Message::FlagContainerDescription;
+    case Flag::Pvp:
+        return Message::FlagPvpDescription;
+    }
+    throw std::invalid_argument("A supported flag has no description");
+}
 
 void appendHelpSection(std::vector<std::string> &lines, Locale locale, bool can_manage, CommandSection section,
                        Message heading)
@@ -62,13 +83,62 @@ std::string_view messageText(Message message, Locale locale)
 
 std::vector<std::string> renderHelp(Locale locale, bool can_manage)
 {
-    const auto rule = std::format("{}------------------------------------------{}", Theme::DarkGray, Theme::Reset);
+    const auto rule = panelRule();
     std::vector<std::string> lines{rule, Theme::decorate(messageText(Message::Help, locale)), rule};
     appendHelpSection(lines, locale, can_manage, CommandSection::Selection, Message::HelpSelection);
     appendHelpSection(lines, locale, can_manage, CommandSection::Regions, Message::HelpRegions);
     appendHelpSection(lines, locale, can_manage, CommandSection::Protection, Message::HelpProtection);
     appendHelpSection(lines, locale, can_manage, CommandSection::General, Message::HelpGeneral);
     lines.push_back(rule);
+    return lines;
+}
+
+std::vector<std::string> renderFlagCatalog(Locale locale)
+{
+    const auto rule = panelRule();
+    std::vector<std::string> lines{rule, Theme::decorate(messageText(Message::FlagsAvailable, locale)), rule};
+    for (const auto flag : supportedFlags()) {
+        lines.push_back(std::format("  {}{}{} / {}{}{}", Theme::Amethyst, flagName(flag), Theme::DarkGray,
+                                    Theme::LightGray, messageText(flagDescription(flag), locale), Theme::Reset));
+    }
+    std::string states;
+    for (const auto state : supportedFlagStates()) {
+        if (!states.empty()) {
+            states += ", ";
+        }
+        states += stateName(state);
+    }
+    lines.push_back(std::format("{}{}{}", Theme::White, translate(Message::FlagStates, locale, states), Theme::Reset));
+    const auto commands = commandCatalog();
+    const auto command = std::ranges::find(commands, std::string_view{"flag"}, &CommandSpec::path);
+    if (command == commands.end()) {
+        throw std::logic_error("The flag command is missing from the command catalog");
+    }
+    lines.push_back(std::format("{}{}{}", Theme::LightGray, translate(Message::FlagSyntax, locale, helpUsage(*command)),
+                                Theme::Reset));
+    lines.push_back(std::format("{}{}{}", Theme::LightGray, messageText(Message::FlagExample, locale), Theme::Reset));
+    lines.push_back(rule);
+    return lines;
+}
+
+std::vector<std::string> renderRegionFlags(const Region &region, Locale locale, std::optional<Flag> selected)
+{
+    if (selected) {
+        static_cast<void>(flagName(*selected));
+    }
+    std::vector<std::string> lines{Theme::decorate(translate(Message::RegionFlags, locale, region.key.name))};
+    for (const auto flag : supportedFlags()) {
+        if (selected && flag != *selected) {
+            continue;
+        }
+        const auto found = region.flags.find(flag);
+        const auto state = found == region.flags.end() ? FlagState::Inherit : found->second;
+        const auto value = std::format("{}{}", Theme::LightGray, stateName(state));
+        lines.push_back(std::format("  {}{}{}", Theme::White,
+                                    translate(Message::FlagInfo, locale, flagName(flag), value), Theme::Reset));
+    }
+    lines.push_back(
+        std::format("{}{}{}", Theme::LightGray, messageText(Message::FlagInheritance, locale), Theme::Reset));
     return lines;
 }
 

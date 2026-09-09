@@ -20,8 +20,16 @@ event timing, client inventories, projectile attribution or third-party plugin o
 Local command smoke check on 2026-09-08: Windows x64, BDS 1.26.45.1, Endstone 0.12.0
 with the matching local fork SDK. The updated DLL loaded one saved region with no registration
 errors, and `plugins` listed only DimenGuard. Console `dg`, `dg help` and `help dg` succeeded;
-native help listed the typed overloads. Client-side suggestions, bilingual chat rendering and
-online-player membership changes have not yet been verified in this deployment.
+native help listed the typed overloads. A client test then exposed ambiguous repeated `region`
+enum values: seeing a usage in help had not proved that the command was executable.
+
+After the correction at 19:02, 24 console parser probes reached the plugin's player-only guard:
+all six region actions, list with/without a page, negative and extreme 32-bit priorities, quoted
+rename arguments, region/single-flag queries, and all four flags with each of the three states.
+The general `dg flag` catalog rendered successfully. Unknown actions, flags and states were
+rejected by native enums. These probes prove native routing, not player-side execution: console
+guards prevented mutations. The region database matched its pre-update backup byte-for-byte.
+Client suggestions and execution of the corrected commands still need in-game acceptance.
 
 Use a disposable world or a restorable copy. Before testing, record:
 
@@ -59,6 +67,12 @@ authoritative world change. Mark unsupported cases as limitations, not passing p
   Reject offline names, partial matches, UUID input and selectors such as `@a`.
 - [ ] Reconnect after installing the updated DLL. Check suggestions for `/dg`, `/dg region`,
   `/dg flag spawn`, `/dg language` and `/dg trust spawn`. Region names are entered manually.
+- [ ] Confirm `region` appears only once among the root suggestions. Execute every region action,
+  not only `help dg`: `list`, `list 1`, `info spawn`, and create/rename/priority/delete on a disposable
+  region. Verify missing/extra arguments and invalid integers are rejected without changing data.
+- [ ] Run `/dg flag` to see all supported flags and descriptions. `/dg flag spawn` and
+  `/dg flag spawn build` must only read stored states; provide a state to change one. Test
+  all flag/state suggestions and reject invalid values. The catalog is also available from console.
 - [ ] Inspect `/dg help` in English and Spanish: framed heading, categorized command rows and
   no administrative rows for a player without `dimenguard.command`. Verify `DimenGuard >` colors.
 - [ ] Verify an owner without `dimenguard.command` cannot administer regions merely by owning one.

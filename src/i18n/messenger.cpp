@@ -38,7 +38,12 @@ void Messenger::deny(endstone::Player &player, Message message)
 
 void Messenger::sendHelp(endstone::CommandSender &sender) const
 {
-    for (const auto &line : renderHelp(getLocale(sender), sender.hasPermission("dimenguard.command"))) {
+    sendLines(sender, renderHelp(getLocale(sender), sender.hasPermission("dimenguard.command")));
+}
+
+void Messenger::sendLines(endstone::CommandSender &sender, std::span<const std::string> lines) const
+{
+    for (const auto &line : lines) {
         sender.sendMessage(endstone::Message{line});
     }
 }

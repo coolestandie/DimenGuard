@@ -3,6 +3,7 @@
 #include <compare>
 #include <map>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <unordered_set>
@@ -55,8 +56,10 @@ enum class FlagState {
 };
 
 [[nodiscard]] std::string_view flagName(Flag flag);
+[[nodiscard]] std::span<const Flag> supportedFlags();
 [[nodiscard]] std::optional<Flag> parseFlag(std::string_view name);
 [[nodiscard]] std::string_view stateName(FlagState state);
+[[nodiscard]] std::span<const FlagState> supportedFlagStates();
 [[nodiscard]] std::optional<FlagState> parseState(std::string_view name);
 [[nodiscard]] bool isValidRegionName(std::string_view name);
 

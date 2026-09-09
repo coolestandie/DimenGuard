@@ -75,6 +75,8 @@ not supported; UUIDs are still stored internally, so existing ownership and memb
 | `/dg region list [page]` | List regions in the current dimension. |
 | `/dg region info <name>` | Show bounds, priority, owner, membership count and flags. |
 | `/dg region priority <name> <integer>` | Set a signed 32-bit priority; larger numbers take precedence. |
+| `/dg flag` | List supported flags, descriptions and usage. |
+| `/dg flag <region> [flag]` | Read the stored flag states without modifying the region. |
 | `/dg flag <region> <flag> <allow\|deny\|inherit>` | Set or clear an explicit flag. |
 | `/dg trust <region> <player>` | Add an online player as a trusted member. |
 | `/dg untrust <region> <player>` | Remove an online player from the trusted members. |
@@ -86,12 +88,19 @@ not supported; UUIDs are still stored internally, so existing ownership and memb
 does not grant that permission. `dimenguard.bypass` defaults to **false, including for operators**;
 grant it explicitly through your permission system if an account should bypass region decisions.
 An operator with command access still follows protection rules unless explicitly granted bypass.
-The console can use help and reload; commands needing a dimension require an in-game player.
+The console can use help, reload and the flag catalog; commands needing a dimension require an in-game player.
 
 Native command parameters suggest subcommands, flags, states, languages and online player names.
-Priority and page arguments use native integer validation. Region names remain free text: the
-current public Endstone API cannot update their suggestions dynamically. Registered usages and
-help rows share one command catalog, so their syntax stays consistent.
+After `/dg region `, choose an action; after `/dg flag <region> `, choose a flag. Running `/dg flag`
+without arguments lists the available flags. Region names remain free text: the current public
+Endstone API cannot update their suggestions dynamically.
+
+Region actions share one native overload. Endstone registers a distinct enum symbol for each
+declaration, so separate overloads with the same `region` prefix conflict in Bedrock's parser.
+The native message tail accepts both names and numbers (Bedrock's `str` rejects numeric tokens);
+the handler splits at most two arguments and validates each action's required values and integers.
+Detailed help syntax and suggested actions
+come from the same command catalog. Metadata registration alone is not a runtime parsing test.
 
 Messages use English or Spanish from the player's client locale, with English as the fallback.
 `/dg language` temporarily overrides that choice until disconnect. The shared theme uses

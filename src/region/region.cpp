@@ -22,6 +22,19 @@ constexpr std::array state_names = {
 };
 
 template <typename Enum, std::size_t Size>
+constexpr std::array<Enum, Size> enumValues(const std::array<std::pair<Enum, std::string_view>, Size> &names)
+{
+    std::array<Enum, Size> values{};
+    for (std::size_t index = 0; index < Size; ++index) {
+        values[index] = names[index].first;
+    }
+    return values;
+}
+
+constexpr auto supported_flags = enumValues(flag_names);
+constexpr auto supported_states = enumValues(state_names);
+
+template <typename Enum, std::size_t Size>
 std::string_view findName(const std::array<std::pair<Enum, std::string_view>, Size> &names, Enum value)
 {
     for (const auto &[candidate, name] : names) {
@@ -62,6 +75,11 @@ std::string_view flagName(Flag flag)
     return findName(flag_names, flag);
 }
 
+std::span<const Flag> supportedFlags()
+{
+    return supported_flags;
+}
+
 std::optional<Flag> parseFlag(std::string_view name)
 {
     return findValue(flag_names, name);
@@ -70,6 +88,11 @@ std::optional<Flag> parseFlag(std::string_view name)
 std::string_view stateName(FlagState state)
 {
     return findName(state_names, state);
+}
+
+std::span<const FlagState> supportedFlagStates()
+{
+    return supported_states;
 }
 
 std::optional<FlagState> parseState(std::string_view name)

@@ -19,6 +19,7 @@ enum class ParameterKind {
     Word,
     Integer,
     Player,
+    Message,
     Choice
 };
 

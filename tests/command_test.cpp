@@ -26,11 +26,12 @@ const CommandSpec &findCommand(std::string_view path)
 
 std::string usageFor(std::string_view path)
 {
-    const auto catalog = commandCatalog();
     const auto usages = nativeUsages();
-    for (std::size_t index = 0; index < catalog.size(); ++index) {
-        if (catalog[index].path == path) {
-            return usages.at(index);
+    const auto root = path.substr(0, path.find(' '));
+    const auto prefix = "/dg (" + std::string(root) + ")";
+    for (const auto &usage : usages) {
+        if (usage.starts_with(prefix)) {
+            return usage;
         }
     }
     throw std::runtime_error("Expected command path is absent: " + std::string(path));
@@ -63,7 +64,7 @@ TEST(CommandCatalog, OnlyHelpAndLanguageArePublic)
     EXPECT_NE(usageFor("help").find("(help)[help: "), std::string::npos);
 }
 
-TEST(CommandCatalog, NativeGrammarUsesRequiredPlayersAndTypedIntegers)
+TEST(CommandCatalog, NativeGrammarUsesRequiredPlayersAndHelpPreservesActionTypes)
 {
     for (const auto path : {"trust", "untrust"}) {
         SCOPED_TRACE(path);
@@ -78,10 +79,12 @@ TEST(CommandCatalog, NativeGrammarUsesRequiredPlayersAndTypedIntegers)
         EXPECT_TRUE(usageFor(path).ends_with(" <region: str> <player: player>"));
         EXPECT_EQ(helpUsage(command), "/dg " + std::string(path) + " <region> <player>");
     }
-    EXPECT_TRUE(usageFor("region priority").ends_with(" <region: str> <priority: int>"));
-    EXPECT_TRUE(usageFor("region list").ends_with(" [page: int]"));
-    EXPECT_TRUE(usageFor("region create").ends_with(" <name: str>"));
-    EXPECT_TRUE(usageFor("region rename").ends_with(" <region: str> <name: str>"));
+    EXPECT_EQ(findCommand("region priority").parameters[1].kind, ParameterKind::Integer);
+    EXPECT_EQ(findCommand("region list").parameters[0].kind, ParameterKind::Integer);
+    EXPECT_EQ(helpUsage(findCommand("region priority")), "/dg region priority <region> <priority>");
+    EXPECT_EQ(helpUsage(findCommand("region list")), "/dg region list [page]");
+    EXPECT_EQ(helpUsage(findCommand("region create")), "/dg region create <name>");
+    EXPECT_EQ(helpUsage(findCommand("region rename")), "/dg region rename <region> <name>");
 }
 
 TEST(CommandCatalog, FlagStateAndLanguageChoicesMatchSupportedValues)
@@ -92,19 +95,21 @@ TEST(CommandCatalog, FlagStateAndLanguageChoicesMatchSupportedValues)
     const auto &states = flag_command.parameters[2];
     EXPECT_EQ(flags.kind, ParameterKind::Choice);
     EXPECT_EQ(states.kind, ParameterKind::Choice);
-    EXPECT_FALSE(flags.optional);
-    EXPECT_FALSE(states.optional);
+    EXPECT_TRUE(flag_command.parameters[0].optional);
+    EXPECT_TRUE(flags.optional);
+    EXPECT_TRUE(states.optional);
     EXPECT_EQ(flags.choices, (std::vector<std::string_view>{"build", "interact", "container-access", "pvp"}));
-    EXPECT_EQ(states.choices, (std::vector<std::string_view>{"allow", "deny", "inherit"}));
+    EXPECT_EQ(states.choices, (std::vector<std::string_view>{"inherit", "allow", "deny"}));
     for (const auto choice : flags.choices) {
         EXPECT_TRUE(parseFlag(choice)) << choice;
     }
     for (const auto choice : states.choices) {
         EXPECT_TRUE(parseState(choice)) << choice;
     }
-    EXPECT_NE(usageFor("flag").find("(build|interact|container-access|pvp)<flag: "), std::string::npos);
-    EXPECT_NE(usageFor("flag").find("(allow|deny|inherit)<state: "), std::string::npos);
-    EXPECT_EQ(helpUsage(flag_command), "/dg flag <region> <flag> <allow|deny|inherit>");
+    EXPECT_NE(usageFor("flag").find("[region: str]"), std::string::npos);
+    EXPECT_NE(usageFor("flag").find("(build|interact|container-access|pvp)[flag: "), std::string::npos);
+    EXPECT_NE(usageFor("flag").find("(inherit|allow|deny)[state: "), std::string::npos);
+    EXPECT_EQ(helpUsage(flag_command), "/dg flag [region] [flag] [inherit|allow|deny]");
 
     const auto &language = findCommand("language");
     ASSERT_EQ(language.parameters.size(), 1);
@@ -117,7 +122,7 @@ TEST(CommandCatalog, FlagStateAndLanguageChoicesMatchSupportedValues)
 TEST(CommandCatalog, EveryNativeOverloadAndEnumNameIsUnique)
 {
     const auto usages = nativeUsages();
-    ASSERT_EQ(usages.size(), commandCatalog().size());
+    ASSERT_EQ(usages.size(), 9);
     std::set<std::string> seen_usages;
     std::set<std::string> seen_enums;
     const std::regex enum_declaration{R"(\([^)]*\)[<\[][a-z0-9_-]+: ([A-Za-z][A-Za-z0-9_]*)[>\]])"};
@@ -136,6 +141,125 @@ TEST(CommandCatalog, EveryNativeOverloadAndEnumNameIsUnique)
         }
     }
     EXPECT_GT(seen_enums.size(), usages.size());
+}
+
+TEST(CommandCatalog, NativeRootsNeverOverlapAcrossOverloads)
+{
+    // Unique enum TYPE names do not prevent ambiguous enum VALUES in Bedrock.
+    // The old six declarations of (region) passed metadata tests but broke actual parsing.
+    const std::regex first_enum{R"(^/dg \(([^)]+)\))"};
+    std::set<std::string> roots;
+    for (const auto &usage : nativeUsages()) {
+        std::smatch match;
+        ASSERT_TRUE(std::regex_search(usage, match, first_enum)) << usage;
+        const auto values = match[1].str();
+        std::string_view remaining = values;
+        while (!remaining.empty()) {
+            const auto separator = remaining.find('|');
+            EXPECT_TRUE(roots.insert(std::string(remaining.substr(0, separator))).second) << usage;
+            remaining = separator == remaining.npos ? std::string_view{} : remaining.substr(separator + 1);
+        }
+    }
+    EXPECT_EQ(roots, (std::set<std::string>{"pos1", "pos2", "region", "flag", "trust", "untrust", "help", "reload",
+                                            "language"}));
+}
+
+TEST(CommandCatalog, RegionActionsShareOneOverloadAndComeFromDetailedCatalog)
+{
+    const auto usage = usageFor("region list");
+    const std::regex action_enum{R"(\(([^)]+)\)<action: [A-Za-z0-9_]+>)"};
+    std::smatch match;
+    ASSERT_TRUE(std::regex_search(usage, match, action_enum));
+    std::string expected_actions;
+    for (const auto &command : commandCatalog()) {
+        if (command.path.starts_with("region ")) {
+            if (!expected_actions.empty()) {
+                expected_actions += '|';
+            }
+            expected_actions += command.path.substr(7);
+            EXPECT_EQ(usageFor(command.path), usage);
+        }
+    }
+    EXPECT_EQ(match[1].str(), expected_actions);
+    EXPECT_TRUE(usage.ends_with(" [arguments: message]"));
+    EXPECT_EQ(usage.find("[name_or_page: str]"), std::string::npos);
+}
+
+TEST(CommandArgumentsParsing, PreservesListPriorityAndRenameArguments)
+{
+    EXPECT_EQ(parseCommandArguments("1", 2), (std::vector<std::string>{"1"}));
+    EXPECT_EQ(parseCommandArguments("test -1", 2), (std::vector<std::string>{"test", "-1"}));
+    EXPECT_EQ(parseCommandArguments("test renamed", 2), (std::vector<std::string>{"test", "renamed"}));
+    EXPECT_EQ(parseCommandArguments("123 2", 2), (std::vector<std::string>{"123", "2"}));
+    EXPECT_EQ(parseCommandArguments("  test   -2147483648  ", 2), (std::vector<std::string>{"test", "-2147483648"}));
+    EXPECT_EQ(parseCommandArguments("test 2147483647", 2), (std::vector<std::string>{"test", "2147483647"}));
+}
+
+TEST(CommandArgumentsParsing, LeavesNumberValidationToTheActionHandler)
+{
+    for (const auto number : {"2147483648", "-2147483649", "1x", "1.5"}) {
+        SCOPED_TRACE(number);
+        const auto arguments = parseCommandArguments("test " + std::string(number), 2);
+        ASSERT_TRUE(arguments);
+        ASSERT_EQ(arguments->size(), 2);
+        EXPECT_EQ(arguments->front(), "test");
+        EXPECT_EQ(arguments->back(), number);
+        EXPECT_FALSE(parseInteger(arguments->back()));
+    }
+}
+
+TEST(CommandArgumentsParsing, PreservesQuotedContentAsOneArgumentWithoutEscapes)
+{
+    EXPECT_EQ(parseCommandArguments("\"test\" -1", 2), (std::vector<std::string>{"test", "-1"}));
+    EXPECT_EQ(parseCommandArguments("\"old name\" \"new name\"", 2),
+              (std::vector<std::string>{"old name", "new name"}));
+    EXPECT_EQ(parseCommandArguments("  \" spaced  name \"  ", 1), (std::vector<std::string>{" spaced  name "}));
+    EXPECT_EQ(parseCommandArguments("\"\"", 1), (std::vector<std::string>{""}));
+    EXPECT_EQ(parseCommandArguments("\"\" \"\"", 2), (std::vector<std::string>{"", ""}));
+    EXPECT_EQ(parseCommandArguments(R"(test\nname)", 1), (std::vector<std::string>{R"(test\nname)"}));
+}
+
+TEST(CommandArgumentsParsing, EmptyOrOnlySpaceInputContainsNoArguments)
+{
+    for (const auto text : {"", " ", "    "}) {
+        SCOPED_TRACE(text);
+        EXPECT_EQ(parseCommandArguments(text, 2), std::vector<std::string>{});
+        EXPECT_EQ(parseCommandArguments(text, 0), std::vector<std::string>{});
+    }
+}
+
+TEST(CommandArgumentsParsing, RejectsUnbalancedOrEmbeddedQuotes)
+{
+    for (const auto text : {"\"test", "test\"", "te\"st", "\"test\"suffix", "prefix\"test\"", "\"first\"\"second\"",
+                            "first \"second", R"("first\"second")"}) {
+        EXPECT_FALSE(parseCommandArguments(text, 2)) << text;
+    }
+}
+
+TEST(CommandArgumentsParsing, RejectsEveryAsciiControlEvenInsideQuotes)
+{
+    for (int code = 0; code <= 127; ++code) {
+        if (code >= 32 && code != 127) {
+            continue;
+        }
+        SCOPED_TRACE(code);
+        const auto control = std::string(1, static_cast<char>(code));
+        EXPECT_FALSE(parseCommandArguments(control + "test", 2));
+        EXPECT_FALSE(parseCommandArguments("test" + control, 2));
+        EXPECT_FALSE(parseCommandArguments("first" + control + "second", 2));
+        EXPECT_FALSE(parseCommandArguments("\"first" + control + "second\"", 2));
+    }
+}
+
+TEST(CommandArgumentsParsing, EnforcesTheMaximumNumberOfWholeArguments)
+{
+    EXPECT_FALSE(parseCommandArguments("test", 0));
+    EXPECT_FALSE(parseCommandArguments("\"\"", 0));
+    EXPECT_FALSE(parseCommandArguments("test renamed", 1));
+    EXPECT_FALSE(parseCommandArguments("test renamed extra", 2));
+    EXPECT_FALSE(parseCommandArguments("\"first name\" \"second name\" third", 2));
+    EXPECT_EQ(parseCommandArguments("\"first name\"", 1), (std::vector<std::string>{"first name"}));
+    EXPECT_EQ(parseCommandArguments("test renamed", 2), (std::vector<std::string>{"test", "renamed"}));
 }
 
 TEST(PlayerNameParsing, AcceptsExactNamesWithOptionalBalancedQuotes)

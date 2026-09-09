@@ -1,8 +1,11 @@
 #pragma once
 
 #include <charconv>
+#include <cstddef>
 #include <optional>
+#include <string>
 #include <string_view>
+#include <vector>
 
 namespace dimenguard {
 
@@ -14,6 +17,45 @@ namespace dimenguard {
         return std::nullopt;
     }
     return value;
+}
+
+/** Split a native message tail into bounded arguments; quotes preserve one whole argument. */
+[[nodiscard]] inline std::optional<std::vector<std::string>> parseCommandArguments(std::string_view text,
+                                                                                   std::size_t max_count)
+{
+    for (const unsigned char character : text) {
+        if (character < 32 || character == 127) {
+            return std::nullopt;
+        }
+    }
+    std::vector<std::string> arguments;
+    while (true) {
+        const auto first = text.find_first_not_of(' ');
+        if (first == text.npos) {
+            return arguments;
+        }
+        text.remove_prefix(first);
+        if (arguments.size() == max_count) {
+            return std::nullopt;
+        }
+        if (text.front() == '"') {
+            const auto closing = text.find('"', 1);
+            if (closing == text.npos || (closing + 1 < text.size() && text[closing + 1] != ' ')) {
+                return std::nullopt;
+            }
+            arguments.emplace_back(text.substr(1, closing - 1));
+            text.remove_prefix(closing + 1);
+        }
+        else {
+            const auto end = text.find(' ');
+            const auto word = text.substr(0, end);
+            if (word.find('"') != word.npos) {
+                return std::nullopt;
+            }
+            arguments.emplace_back(word);
+            text.remove_prefix(word.size());
+        }
+    }
 }
 
 /** Native player arguments can retain their outer quotes; only individual names are supported. */
