@@ -1,6 +1,8 @@
 param(
     [string]$EndstoneSource = '',
-    [switch]$CoreOnly
+    [switch]$CoreOnly,
+    [switch]$Benchmarks,
+    [string]$BuildDirectory = 'build'
 )
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
@@ -13,11 +15,12 @@ Enter-VsDevShell -VsInstallPath $installation -SkipAutomaticLocation -DevCmdArgu
 $llvm = Join-Path $installation 'VC/Tools/Llvm/x64/bin'
 $cmakeRoot = Join-Path $installation 'Common7/IDE/CommonExtensions/Microsoft/CMake'
 $env:PATH = "$llvm;$(Join-Path $cmakeRoot 'CMake/bin');$(Join-Path $cmakeRoot 'Ninja');$env:PATH"
-$buildPath = Join-Path $projectRoot 'build'
+$buildPath = Join-Path $projectRoot $BuildDirectory
 $plugin = if ($CoreOnly) { 'OFF' } else { 'ON' }
+$benchmarkTargets = if ($Benchmarks) { 'ON' } else { 'OFF' }
 $configureArgs = @('-S', $projectRoot, '-B', $buildPath, '-G', 'Ninja',
     '-DCMAKE_BUILD_TYPE=RelWithDebInfo', '-DCMAKE_C_COMPILER=clang-cl', '-DCMAKE_CXX_COMPILER=clang-cl',
-    "-DDIMENGUARD_BUILD_PLUGIN=$plugin", '-DBUILD_TESTING=ON')
+    "-DDIMENGUARD_BUILD_PLUGIN=$plugin", "-DDIMENGUARD_BUILD_BENCHMARKS=$benchmarkTargets", '-DBUILD_TESTING=ON')
 if ($EndstoneSource) { $configureArgs += "-DFETCHCONTENT_SOURCE_DIR_ENDSTONE=$((Resolve-Path -LiteralPath $EndstoneSource).Path)" }
 & cmake @configureArgs
 if ($LASTEXITCODE -ne 0) { throw 'CMake configuration failed.' }

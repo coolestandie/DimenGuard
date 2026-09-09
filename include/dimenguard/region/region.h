@@ -1,5 +1,7 @@
 #pragma once
 
+#include "dimenguard/region/flag.h"
+
 #include <compare>
 #include <map>
 #include <optional>
@@ -42,25 +44,6 @@ struct Bounds {
     bool operator==(const Bounds &) const = default;
 };
 
-enum class Flag {
-    Build,
-    Interact,
-    ContainerAccess,
-    Pvp,
-};
-
-enum class FlagState {
-    Inherit,
-    Allow,
-    Deny,
-};
-
-[[nodiscard]] std::string_view flagName(Flag flag);
-[[nodiscard]] std::span<const Flag> supportedFlags();
-[[nodiscard]] std::optional<Flag> parseFlag(std::string_view name);
-[[nodiscard]] std::string_view stateName(FlagState state);
-[[nodiscard]] std::span<const FlagState> supportedFlagStates();
-[[nodiscard]] std::optional<FlagState> parseState(std::string_view name);
 [[nodiscard]] bool isValidRegionName(std::string_view name);
 
 struct Region {
@@ -77,4 +60,4 @@ struct Region {
 /** Throws std::invalid_argument for invalid identities, bounds, names or flag values. */
 void validateRegion(const Region &region);
 
-}  // namespace dimenguard
+}

@@ -75,5 +75,5 @@ TEST_F(PluginContractTest, AdministrationAndBypassHaveSeparatePermissionDefaults
     check_permission("dimenguard.bypass", endstone::PermissionDefault::False);
 }
 
-}  // namespace
-}  // namespace dimenguard
+}
+}

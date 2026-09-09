@@ -2,10 +2,10 @@
 
 #include "dimenguard/command/catalog.h"
 #include "dimenguard/command/command_handler.h"
+#include "dimenguard/listener/command_suggestions_listener.h"
 #include "dimenguard/listener/protection_listener.h"
 #include "dimenguard/version.h"
 
-#include <endstone/event/player/player_quit_event.h>
 #include <exception>
 
 namespace dimenguard {
@@ -18,13 +18,12 @@ void DimenGuardPlugin::onEnable()
     commands_ = std::make_unique<CommandHandler>(*this);
     protection_ = std::make_unique<ProtectionListener>(*this);
     protection_->registerEvents();
-    registerEvent<endstone::PlayerQuitEvent>([this](endstone::PlayerQuitEvent &event) {
-        messenger_.forget(*event.getPlayer());
-        selections_.forget(event.getPlayer()->getUniqueId().str());
-    });
+    suggestions_ = std::make_unique<CommandSuggestionsListener>(*this);
+    suggestions_->registerEvents();
     try {
         reloadRegions();
         getLogger().info("Loaded {} regions.", service_->getRegions().getAll().size());
+        refreshRegionSuggestions();
     }
     catch (const std::exception &error) {
         getLogger().error("Region storage is unavailable: {}. Intercepted actions are locked globally. "
@@ -35,6 +34,7 @@ void DimenGuardPlugin::onEnable()
 
 void DimenGuardPlugin::onDisable()
 {
+    suggestions_.reset();
     commands_.reset();
     protection_.reset();
     selections_ = {};
@@ -63,7 +63,14 @@ void DimenGuardPlugin::reloadRegions()
     }
 }
 
-}  // namespace dimenguard
+void DimenGuardPlugin::refreshRegionSuggestions() noexcept
+{
+    if (suggestions_) {
+        suggestions_->requestRefresh();
+    }
+}
+
+}
 
 ENDSTONE_PLUGIN("dimenguard", DIMENGUARD_VERSION, dimenguard::DimenGuardPlugin)
 {

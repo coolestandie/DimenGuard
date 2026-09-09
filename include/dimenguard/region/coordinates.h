@@ -37,4 +37,4 @@ namespace dimenguard {
     return static_cast<int>(result);
 }
 
-}  // namespace dimenguard
+}

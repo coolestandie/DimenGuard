@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dimenguard/i18n/translator.h"
+#include "dimenguard/presentation/theme.h"
 
 #include <chrono>
 #include <endstone/command/command_sender.h>
@@ -8,6 +9,7 @@
 #include <span>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 namespace dimenguard {
 
@@ -32,4 +34,4 @@ private:
     std::unordered_map<std::string, std::chrono::steady_clock::time_point> last_denial_;
 };
 
-}  // namespace dimenguard
+}

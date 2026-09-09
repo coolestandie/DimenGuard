@@ -1,4 +1,6 @@
-#include "dimenguard/i18n/messenger.h"
+#include "dimenguard/presentation/messenger.h"
+
+#include "dimenguard/presentation/help_panel.h"
 
 namespace dimenguard {
 
@@ -48,4 +50,4 @@ void Messenger::sendLines(endstone::CommandSender &sender, std::span<const std::
     }
 }
 
-}  // namespace dimenguard
+}

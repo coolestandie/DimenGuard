@@ -6,7 +6,9 @@
 #include <memory>
 #include <vector>
 
-struct sqlite3;
+namespace dimenguard::sqlite {
+class Connection;
+}
 
 namespace dimenguard {
 
@@ -25,12 +27,7 @@ public:
     void save(const std::vector<Region> &regions);
 
 private:
-    struct DatabaseCloser {
-        void operator()(sqlite3 *database) const noexcept;
-    };
-
-    std::filesystem::path path_;
-    std::unique_ptr<sqlite3, DatabaseCloser> database_;
+    std::unique_ptr<sqlite::Connection> database_;
 };
 
-}  // namespace dimenguard
+}

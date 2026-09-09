@@ -49,4 +49,4 @@ private:
     std::unordered_map<std::string, Selection> selections_;
 };
 
-}  // namespace dimenguard
+}

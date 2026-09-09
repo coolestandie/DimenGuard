@@ -93,5 +93,5 @@ TEST(BlockCoordinates, ChecksFlooredIntegerRangeBeforeConversion)
     EXPECT_EQ(floorBlockCoordinate(static_cast<float>(minimum)), minimum);
 }
 
-}  // namespace
-}  // namespace dimenguard
+}
+}

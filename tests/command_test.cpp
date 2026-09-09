@@ -1,3 +1,4 @@
+#include "dimenguard/command/arguments.h"
 #include "dimenguard/command/catalog.h"
 #include "dimenguard/command/parse.h"
 #include "dimenguard/region/region.h"
@@ -64,7 +65,7 @@ TEST(CommandCatalog, OnlyHelpAndLanguageArePublic)
     EXPECT_NE(usageFor("help").find("(help)[help: "), std::string::npos);
 }
 
-TEST(CommandCatalog, NativeGrammarUsesRequiredPlayersAndHelpPreservesActionTypes)
+TEST(CommandCatalog, LogicalGrammarUsesPlayersAndNativeTailsAcceptNumericNames)
 {
     for (const auto path : {"trust", "untrust"}) {
         SCOPED_TRACE(path);
@@ -76,7 +77,7 @@ TEST(CommandCatalog, NativeGrammarUsesRequiredPlayersAndHelpPreservesActionTypes
         EXPECT_EQ(command.parameters[1].name, "player");
         EXPECT_EQ(command.parameters[1].kind, ParameterKind::Player);
         EXPECT_FALSE(command.parameters[1].optional);
-        EXPECT_TRUE(usageFor(path).ends_with(" <region: str> <player: player>"));
+        EXPECT_TRUE(usageFor(path).ends_with(" <arguments: message>"));
         EXPECT_EQ(helpUsage(command), "/dg " + std::string(path) + " <region> <player>");
     }
     EXPECT_EQ(findCommand("region priority").parameters[1].kind, ParameterKind::Integer);
@@ -98,7 +99,11 @@ TEST(CommandCatalog, FlagStateAndLanguageChoicesMatchSupportedValues)
     EXPECT_TRUE(flag_command.parameters[0].optional);
     EXPECT_TRUE(flags.optional);
     EXPECT_TRUE(states.optional);
-    EXPECT_EQ(flags.choices, (std::vector<std::string_view>{"build", "interact", "container-access", "pvp"}));
+    std::vector<std::string_view> supported_names;
+    for (const auto flag : supportedFlags()) {
+        supported_names.push_back(flagName(flag));
+    }
+    EXPECT_EQ(flags.choices, supported_names);
     EXPECT_EQ(states.choices, (std::vector<std::string_view>{"inherit", "allow", "deny"}));
     for (const auto choice : flags.choices) {
         EXPECT_TRUE(parseFlag(choice)) << choice;
@@ -106,9 +111,7 @@ TEST(CommandCatalog, FlagStateAndLanguageChoicesMatchSupportedValues)
     for (const auto choice : states.choices) {
         EXPECT_TRUE(parseState(choice)) << choice;
     }
-    EXPECT_NE(usageFor("flag").find("[region: str]"), std::string::npos);
-    EXPECT_NE(usageFor("flag").find("(build|interact|container-access|pvp)[flag: "), std::string::npos);
-    EXPECT_NE(usageFor("flag").find("(inherit|allow|deny)[state: "), std::string::npos);
+    EXPECT_TRUE(usageFor("flag").ends_with(" [arguments: message]"));
     EXPECT_EQ(helpUsage(flag_command), "/dg flag [region] [flag] [inherit|allow|deny]");
 
     const auto &language = findCommand("language");
@@ -183,6 +186,29 @@ TEST(CommandCatalog, RegionActionsShareOneOverloadAndComeFromDetailedCatalog)
     EXPECT_EQ(match[1].str(), expected_actions);
     EXPECT_TRUE(usage.ends_with(" [arguments: message]"));
     EXPECT_EQ(usage.find("[name_or_page: str]"), std::string::npos);
+}
+
+TEST(CommandNormalization, SplitsOnlyNativeMessageTails)
+{
+    const auto normalize = [](std::initializer_list<std::string> args) {
+        return normalizeCommandArguments(std::vector<std::string>(args));
+    };
+    EXPECT_EQ(normalize({}), std::vector<std::string>{});
+    EXPECT_EQ(normalize({"language", "es"}), (std::vector<std::string>{"language", "es"}));
+    EXPECT_EQ(normalize({"region", "list"}), (std::vector<std::string>{"region", "list"}));
+    EXPECT_EQ(normalize({"region", "priority", "123 -1"}),
+              (std::vector<std::string>{"region", "priority", "123", "-1"}));
+    EXPECT_EQ(normalize({"flag"}), (std::vector<std::string>{"flag"}));
+    EXPECT_EQ(normalize({"flag", "123 build deny"}), (std::vector<std::string>{"flag", "123", "build", "deny"}));
+    EXPECT_EQ(normalize({"trust", "123 \"Player With Spaces\""}),
+              (std::vector<std::string>{"trust", "123", "Player With Spaces"}));
+    EXPECT_EQ(normalize({"untrust", "123 IKyel0I"}), (std::vector<std::string>{"untrust", "123", "IKyel0I"}));
+    EXPECT_FALSE(normalize({"region"}));
+    EXPECT_FALSE(normalize({"region", "rename", "a b extra"}));
+    EXPECT_FALSE(normalize({"flag", "test build deny extra"}));
+    EXPECT_FALSE(normalize({"trust", "test a b"}));
+    EXPECT_FALSE(normalize({"trust", "test \"broken"}));
+    EXPECT_FALSE(normalize({"region", "list", "1", "2"}));
 }
 
 TEST(CommandArgumentsParsing, PreservesListPriorityAndRenameArguments)
@@ -299,5 +325,5 @@ TEST(PlayerNameMatching, CaseInsensitiveMatchStillRequiresTheEntireName)
     EXPECT_FALSE(playerNamesMatch("Player One", "Player  One"));
 }
 
-}  // namespace
-}  // namespace dimenguard
+}
+}

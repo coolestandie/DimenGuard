@@ -36,7 +36,7 @@ std::vector<Region>::iterator findRegion(std::vector<Region> &regions, const Reg
     return found;
 }
 
-}  // namespace
+}
 
 ServiceError::ServiceError(ServiceErrorCode code, const std::string &message) : std::runtime_error(message), code_(code)
 {
@@ -57,10 +57,21 @@ const RegionManager &RegionService::getRegions() const noexcept
     return regions_;
 }
 
+std::uint64_t RegionService::getRegionNamesRevision() const noexcept
+{
+    return region_names_revision_;
+}
+
 void RegionService::reload()
 {
-    auto candidate = prepareSnapshot(store_.load());
-    regions_ = std::move(candidate);
+    try {
+        auto candidate = prepareSnapshot(store_.load());
+        regions_ = std::move(candidate);
+        ++region_names_revision_;
+    }
+    catch (const storage::SnapshotLimitError &error) {
+        throw ServiceError(ServiceErrorCode::LimitReached, error.what());
+    }
 }
 
 void RegionService::create(Region region)
@@ -75,6 +86,7 @@ void RegionService::create(Region region)
     auto candidate = regions_.getAll();
     candidate.push_back(std::move(region));
     replaceSnapshot(std::move(candidate));
+    ++region_names_revision_;
 }
 
 void RegionService::erase(const RegionKey &key)
@@ -82,6 +94,7 @@ void RegionService::erase(const RegionKey &key)
     auto candidate = regions_.getAll();
     candidate.erase(findRegion(candidate, key));
     replaceSnapshot(std::move(candidate));
+    ++region_names_revision_;
 }
 
 void RegionService::rename(const RegionKey &key, std::string name)
@@ -94,6 +107,7 @@ void RegionService::rename(const RegionKey &key, std::string name)
         }
         region.key.name = std::move(name);
     });
+    ++region_names_revision_;
 }
 
 void RegionService::setPriority(const RegionKey &key, int priority)
@@ -144,4 +158,4 @@ void RegionService::mutateRegion(const RegionKey &key, const std::function<void(
     replaceSnapshot(std::move(candidate));
 }
 
-}  // namespace dimenguard
+}

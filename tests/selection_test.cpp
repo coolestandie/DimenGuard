@@ -45,5 +45,5 @@ TEST(Selection, IsolatesPlayersAndClearsSessionState)
     EXPECT_FALSE(selections.get("alice", dimension));
 }
 
-}  // namespace
-}  // namespace dimenguard
+}
+}

@@ -1,13 +1,19 @@
 #include "dimenguard/command/catalog.h"
 #include "dimenguard/command/parse.h"
 #include "dimenguard/i18n/translator.h"
+#include "dimenguard/presentation/flag_panel.h"
+#include "dimenguard/presentation/help_panel.h"
+#include "dimenguard/presentation/panel.h"
+#include "dimenguard/presentation/theme.h"
 
+#include <algorithm>
 #include <array>
 #include <gtest/gtest.h>
 #include <set>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace dimenguard {
@@ -36,7 +42,7 @@ std::string plainHelp(const std::vector<std::string> &lines)
     return text;
 }
 
-}  // namespace
+}
 
 TEST(Translation, EveryMessageFormatsInBothLocales)
 {
@@ -75,6 +81,36 @@ TEST(Translation, ThemeMatchesUnbracketedReferenceAndResetsFormatting)
     EXPECT_TRUE(result.starts_with(std::format("{}Dimen{}Guard", Theme::Amethyst, Theme::LightGray)));
     EXPECT_NE(result.find(std::format("{} > {}Test", Theme::DarkGray, Theme::White)), result.npos);
     EXPECT_TRUE(result.ends_with(Theme::Reset));
+}
+
+TEST(PanelFormatting, SharedFramedRowsKeepExactColorsAndSpacing)
+{
+    PanelBuilder panel("Title");
+    panel.heading("Section");
+    panel.entry("label", "description");
+    panel.line("value", Theme::White);
+    const auto rule = std::format("{}------------------------------------------{}", Theme::DarkGray, Theme::Reset);
+    EXPECT_EQ(std::move(panel).finish(), (std::vector<std::string>{
+                                             rule,
+                                             Theme::decorate("Title"),
+                                             rule,
+                                             std::string(Theme::Reset),
+                                             std::format("  {}Section{}", Theme::Amethyst, Theme::Reset),
+                                             std::format("  {}label{} / {}description{}", Theme::Amethyst,
+                                                         Theme::DarkGray, Theme::LightGray, Theme::Reset),
+                                             std::format("{}value{}", Theme::White, Theme::Reset),
+                                             rule,
+                                         }));
+}
+
+TEST(PanelFormatting, CompactRowsDoNotAddFramingAndKeepIndentation)
+{
+    PanelBuilder panel("Title", PanelStyle::Compact);
+    panel.line("body", Theme::White, "  ");
+    panel.line("footer");
+    EXPECT_EQ(std::move(panel).finish(),
+              (std::vector<std::string>{Theme::decorate("Title"), std::format("  {}body{}", Theme::White, Theme::Reset),
+                                        std::format("{}footer{}", Theme::LightGray, Theme::Reset)}));
 }
 
 TEST(HelpPanel, HasLocalizedSectionsAndOneBrandedTitle)
@@ -123,6 +159,24 @@ TEST(HelpPanel, UsesRegisteredSyntaxAndTranslatedDescriptions)
     }
 }
 
+TEST(HelpPanel, CommandRowsPreserveExistingArgumentColorTransitions)
+{
+    for (const auto locale : {Locale::English, Locale::Spanish}) {
+        const auto lines = renderHelp(locale, true);
+        for (const auto &entry : commandCatalog()) {
+            const auto usage = helpUsage(entry);
+            const auto argument_start = usage.find_first_of("<[");
+            const auto command = std::string_view(usage).substr(0, argument_start);
+            const auto arguments =
+                argument_start == usage.npos ? std::string_view{} : std::string_view(usage).substr(argument_start);
+            const auto expected =
+                std::format("  {}{}{}{}{} / {}{}{}", Theme::White, command, Theme::LightGray, arguments,
+                            Theme::DarkGray, Theme::LightGray, messageText(entry.description, locale), Theme::Reset);
+            EXPECT_NE(std::ranges::find(lines, expected), lines.end()) << entry.path;
+        }
+    }
+}
+
 TEST(HelpPanel, StaysBoundedAndResetsEveryLine)
 {
     for (const auto locale : {Locale::English, Locale::Spanish}) {
@@ -141,12 +195,14 @@ TEST(HelpPanel, StaysBoundedAndResetsEveryLine)
 TEST(FlagSupport, EnumeratesUniqueNamesThatRoundTripThroughParsers)
 {
     std::set<std::string_view> flags;
-    ASSERT_EQ(supportedFlags().size(), 4);
+    ASSERT_EQ(supportedFlags().size(), 13);
     for (const auto flag : supportedFlags()) {
         EXPECT_TRUE(flags.insert(flagName(flag)).second);
         EXPECT_EQ(parseFlag(flagName(flag)), flag);
     }
-    EXPECT_EQ(flags, (std::set<std::string_view>{"build", "interact", "container-access", "pvp"}));
+    EXPECT_EQ(flags, (std::set<std::string_view>{"build", "interact", "container-access", "pvp", "explosions",
+                                                 "fluid-flow", "block-form", "leaf-decay", "actor-griefing",
+                                                 "mob-spawning", "mob-damage", "entry", "exit"}));
     std::set<std::string_view> states;
     ASSERT_EQ(supportedFlagStates().size(), 3);
     for (const auto state : supportedFlagStates()) {
@@ -171,15 +227,22 @@ TEST(FlagPresentation, CatalogShowsEveryFlagStatesAndLocalizedUsage)
         }
         EXPECT_NE(text.find("/dg flag spawn pvp deny"), text.npos);
         EXPECT_NE(text.find(locale == Locale::English ? "Usage:" : "Uso:"), text.npos);
-        for (const auto description : {Message::FlagBuildDescription, Message::FlagInteractDescription,
-                                       Message::FlagContainerDescription, Message::FlagPvpDescription}) {
+        for (const auto description :
+             {Message::FlagBuildDescription, Message::FlagInteractDescription, Message::FlagContainerDescription,
+              Message::FlagPvpDescription, Message::FlagExplosionsDescription, Message::FlagFluidFlowDescription,
+              Message::FlagBlockFormDescription, Message::FlagLeafDecayDescription,
+              Message::FlagActorGriefingDescription, Message::FlagMobSpawningDescription,
+              Message::FlagMobDamageDescription, Message::FlagEntryDescription, Message::FlagExitDescription}) {
             EXPECT_NE(text.find(messageText(description, locale)), text.npos);
             EXPECT_NE(messageText(description, Locale::English), messageText(description, Locale::Spanish));
         }
         for (const auto &line : lines) {
             EXPECT_TRUE(line.ends_with(Theme::Reset));
             EXPECT_EQ(line.find('\n'), line.npos);
+            EXPECT_LE(plainText(line).size(), 110);
         }
+        EXPECT_LE(lines.size(), 24);
+        EXPECT_NE(text.find(messageText(Message::FlagDefaults, locale)), text.npos);
     }
 }
 
@@ -197,6 +260,12 @@ TEST(FlagPresentation, RegionQueriesShowStoredAndInheritedStatesWithoutMutation)
         EXPECT_NE(text.find("interact: inherit"), text.npos);
         EXPECT_NE(text.find("container-access: inherit"), text.npos);
         EXPECT_NE(text.find(messageText(Message::FlagInheritance, locale)), text.npos);
+        EXPECT_NE(text.find(messageText(Message::FlagDefaults, locale)), text.npos);
+        for (const auto flag : supportedFlags()) {
+            const auto found = before.find(flag);
+            const auto state = found == before.end() ? FlagState::Inherit : found->second;
+            EXPECT_NE(text.find(std::format("{}: {}", flagName(flag), stateName(state))), text.npos);
+        }
         EXPECT_EQ(region.flags, before);
     }
 }
@@ -209,9 +278,11 @@ TEST(FlagPresentation, SingleFlagQueryShowsOnlyRequestedStoredValue)
     const auto before = region.flags;
     const auto text = plainHelp(renderRegionFlags(region, Locale::English, Flag::Pvp));
     EXPECT_NE(text.find("pvp: deny"), text.npos);
-    EXPECT_EQ(text.find("build:"), text.npos);
-    EXPECT_EQ(text.find("interact:"), text.npos);
-    EXPECT_EQ(text.find("container-access:"), text.npos);
+    for (const auto flag : supportedFlags()) {
+        if (flag != Flag::Pvp) {
+            EXPECT_EQ(text.find(std::format("{}:", flagName(flag))), text.npos);
+        }
+    }
     EXPECT_EQ(region.flags, before);
     EXPECT_THROW(static_cast<void>(renderRegionFlags(region, Locale::English, static_cast<Flag>(999))),
                  std::invalid_argument);
@@ -226,4 +297,4 @@ TEST(CommandParsing, RejectsPartialAndOverflowingIntegers)
     }
 }
 
-}  // namespace dimenguard
+}

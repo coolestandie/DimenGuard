@@ -32,4 +32,4 @@ namespace dimenguard {
     return {block.getX(), block.getY(), block.getZ()};
 }
 
-}  // namespace dimenguard
+}

@@ -1,63 +1,9 @@
 #include "dimenguard/region/region.h"
 
 #include <algorithm>
-#include <array>
 #include <stdexcept>
-#include <utility>
 
 namespace dimenguard {
-namespace {
-
-constexpr std::array flag_names = {
-    std::pair{Flag::Build, std::string_view{"build"}},
-    std::pair{Flag::Interact, std::string_view{"interact"}},
-    std::pair{Flag::ContainerAccess, std::string_view{"container-access"}},
-    std::pair{Flag::Pvp, std::string_view{"pvp"}},
-};
-
-constexpr std::array state_names = {
-    std::pair{FlagState::Inherit, std::string_view{"inherit"}},
-    std::pair{FlagState::Allow, std::string_view{"allow"}},
-    std::pair{FlagState::Deny, std::string_view{"deny"}},
-};
-
-template <typename Enum, std::size_t Size>
-constexpr std::array<Enum, Size> enumValues(const std::array<std::pair<Enum, std::string_view>, Size> &names)
-{
-    std::array<Enum, Size> values{};
-    for (std::size_t index = 0; index < Size; ++index) {
-        values[index] = names[index].first;
-    }
-    return values;
-}
-
-constexpr auto supported_flags = enumValues(flag_names);
-constexpr auto supported_states = enumValues(state_names);
-
-template <typename Enum, std::size_t Size>
-std::string_view findName(const std::array<std::pair<Enum, std::string_view>, Size> &names, Enum value)
-{
-    for (const auto &[candidate, name] : names) {
-        if (candidate == value) {
-            return name;
-        }
-    }
-    throw std::invalid_argument("Unknown region flag or state");
-}
-
-template <typename Enum, std::size_t Size>
-std::optional<Enum> findValue(const std::array<std::pair<Enum, std::string_view>, Size> &names, std::string_view name)
-{
-    for (const auto &[value, candidate] : names) {
-        if (candidate == name) {
-            return value;
-        }
-    }
-    return std::nullopt;
-}
-
-}  // namespace
-
 Bounds Bounds::between(const BlockPosition &a, const BlockPosition &b)
 {
     return {{std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z)},
@@ -68,36 +14,6 @@ bool Bounds::contains(const BlockPosition &position) const
 {
     return position.x >= min.x && position.x <= max.x && position.y >= min.y && position.y <= max.y &&
            position.z >= min.z && position.z <= max.z;
-}
-
-std::string_view flagName(Flag flag)
-{
-    return findName(flag_names, flag);
-}
-
-std::span<const Flag> supportedFlags()
-{
-    return supported_flags;
-}
-
-std::optional<Flag> parseFlag(std::string_view name)
-{
-    return findValue(flag_names, name);
-}
-
-std::string_view stateName(FlagState state)
-{
-    return findName(state_names, state);
-}
-
-std::span<const FlagState> supportedFlagStates()
-{
-    return supported_states;
-}
-
-std::optional<FlagState> parseState(std::string_view name)
-{
-    return findValue(state_names, name);
 }
 
 bool Region::isMember(std::string_view player_id) const
@@ -134,4 +50,4 @@ void validateRegion(const Region &region)
     }
 }
 
-}  // namespace dimenguard
+}

@@ -144,7 +144,7 @@ std::vector<CommandParameter> regionParameters()
     return {{"action", Kind::Choice, false, std::move(actions)}, {"arguments", Kind::Message, true, {}}};
 }
 
-}  // namespace
+}
 
 std::span<const CommandSpec> commandCatalog()
 {
@@ -179,9 +179,16 @@ std::vector<std::string> nativeUsages()
             }
             continue;
         }
-        usages.push_back(nativeUsage(command.path, command.parameters, command.optional_path, index));
+        if (command.path == "flag" || command.path == "trust" || command.path == "untrust") {
+            // Numeric region names must reach our parser; native str/Id rejects them.
+            const std::array tail{CommandParameter{"arguments", Kind::Message, command.path == "flag", {}}};
+            usages.push_back(nativeUsage(command.path, tail, false, index));
+        }
+        else {
+            usages.push_back(nativeUsage(command.path, command.parameters, command.optional_path, index));
+        }
     }
     return usages;
 }
 
-}  // namespace dimenguard
+}

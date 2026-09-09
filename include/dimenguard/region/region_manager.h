@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dimenguard/region/region.h"
+#include "dimenguard/region/region_index.h"
 
 #include <cstddef>
 #include <map>
@@ -18,12 +19,19 @@ namespace dimenguard {
  */
 class RegionManager {
 public:
+    RegionManager() = default;
+    RegionManager(const RegionManager &) = default;
+    RegionManager &operator=(const RegionManager &other);
+    RegionManager(RegionManager &&other) noexcept;
+    RegionManager &operator=(RegionManager &&other) noexcept;
+
     [[nodiscard]] const std::vector<Region> &getAll() const;
 
     /** Validates and builds a new index before replacing any live state. */
     void replaceAll(std::vector<Region> regions);
 
     [[nodiscard]] const Region *find(const RegionKey &key) const;
+    [[nodiscard]] std::vector<const Region *> inDimension(const DimensionKey &dimension) const;
 
     /** Returns matching regions by descending priority, then ascending name. */
     [[nodiscard]] std::vector<const Region *> query(const DimensionKey &dimension, const BlockPosition &position) const;
@@ -31,33 +39,22 @@ public:
     /**
      * Explicit flags fall through inherited priority tiers; deny wins ties. With no explicit
      * decision, build/interact/container require membership in every top-priority region, while
-     * PvP is allowed. No matching region permits the action. Only explicit bypass skips policy.
+     * other flags are allowed. No matching region permits the action. Only explicit bypass skips policy.
      */
     [[nodiscard]] bool isAllowed(const DimensionKey &dimension, const BlockPosition &position, Flag flag,
                                  std::string_view player_id, bool bypass = false) const;
+    [[nodiscard]] bool isEnvironmentAllowed(const DimensionKey &dimension, const BlockPosition &position,
+                                            Flag flag) const;
+    [[nodiscard]] bool isTransitionAllowed(const DimensionKey &from_dimension, const BlockPosition &from,
+                                           const DimensionKey &to_dimension, const BlockPosition &to,
+                                           std::string_view player_id, bool bypass = false) const;
 
 private:
-    struct Node {
-        Bounds bounds;
-        std::size_t begin = 0;
-        std::size_t end = 0;
-        std::size_t left = 0;
-        std::size_t right = 0;
-        bool leaf = true;
-    };
-
-    struct SpatialTree {
-        std::vector<std::size_t> entries;
-        std::vector<Node> nodes;
-    };
-
-    std::size_t buildNode(SpatialTree &tree, std::size_t begin, std::size_t end);
-    void queryNode(const SpatialTree &tree, std::size_t node_index, const BlockPosition &position,
-                   std::vector<const Region *> &result) const;
+    void swap(RegionManager &other) noexcept;
 
     std::vector<Region> regions_;
     std::map<RegionKey, std::size_t> keys_;
-    std::map<DimensionKey, SpatialTree> trees_;
+    RegionIndex index_;
 };
 
-}  // namespace dimenguard
+}

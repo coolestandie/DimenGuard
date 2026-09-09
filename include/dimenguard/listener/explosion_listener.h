@@ -1,0 +1,32 @@
+#pragma once
+
+#include <endstone/util/pointers.h>
+#include <vector>
+
+namespace endstone {
+class ActorDamageEvent;
+class ActorExplodeEvent;
+class Block;
+class BlockExplodeEvent;
+class Location;
+}
+
+namespace dimenguard {
+
+class ProtectionContext;
+
+class ExplosionListener {
+public:
+    explicit ExplosionListener(ProtectionContext &context);
+    void registerEvents();
+
+private:
+    bool allowed(const endstone::Location &origin, const std::vector<endstone::NotNull<endstone::Block>> &blocks);
+    bool onActorExplosion(endstone::ActorExplodeEvent &event);
+    bool onBlockExplosion(endstone::BlockExplodeEvent &event);
+    bool onDamage(endstone::ActorDamageEvent &event);
+
+    ProtectionContext &context_;
+};
+
+}

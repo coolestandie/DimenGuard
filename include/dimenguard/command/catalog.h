@@ -39,9 +39,8 @@ struct CommandSpec {
     bool optional_path = false;
 };
 
-/** One catalog supplies the native command grammar and the localized help panel. */
 [[nodiscard]] std::span<const CommandSpec> commandCatalog();
 [[nodiscard]] std::string helpUsage(const CommandSpec &command);
 [[nodiscard]] std::vector<std::string> nativeUsages();
 
-}  // namespace dimenguard
+}

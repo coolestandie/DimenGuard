@@ -1,14 +1,12 @@
+#include "dimenguard/storage/limits.h"
 #include "dimenguard/storage/sqlite_store.h"
+#include "support/database_fixture.h"
+#include "support/region_assertions.h"
 
-#include <atomic>
-#include <chrono>
 #include <filesystem>
 #include <gtest/gtest.h>
-#include <memory>
-#include <sqlite3.h>
 #include <stdexcept>
 #include <string>
-#include <system_error>
 #include <vector>
 
 namespace dimenguard {
@@ -29,49 +27,8 @@ Region makeRegion()
     return region;
 }
 
-void expectRegionEqual(const Region &actual, const Region &expected)
-{
-    EXPECT_EQ(actual.key, expected.key);
-    EXPECT_EQ(actual.bounds, expected.bounds);
-    EXPECT_EQ(actual.priority, expected.priority);
-    EXPECT_EQ(actual.owner, expected.owner);
-    EXPECT_EQ(actual.members, expected.members);
-    EXPECT_EQ(actual.flags, expected.flags);
-}
-
-class StorageTest : public testing::Test {
-protected:
-    void SetUp() override
-    {
-        static std::atomic<unsigned int> sequence{0};
-        const auto timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
-        directory_ = std::filesystem::temp_directory_path() /
-                     ("dimenguard-storage-" + std::to_string(timestamp) + "-" + std::to_string(sequence++));
-        ASSERT_TRUE(std::filesystem::create_directory(directory_));
-        path_ = directory_ / "regions.sqlite3";
-    }
-
-    void TearDown() override
-    {
-        std::error_code error;
-        std::filesystem::remove_all(directory_, error);
-        EXPECT_FALSE(error) << error.message();
-    }
-
-    void executeRaw(const char *sql) const
-    {
-        sqlite3 *database = nullptr;
-        const auto encoded_path = path_.u8string();
-        const std::string filename(encoded_path.begin(), encoded_path.end());
-        const auto result = sqlite3_open(filename.c_str(), &database);
-        const std::unique_ptr<sqlite3, decltype(&sqlite3_close)> connection(database, sqlite3_close);
-        ASSERT_EQ(result, SQLITE_OK);
-        ASSERT_EQ(sqlite3_exec(database, sql, nullptr, nullptr, nullptr), SQLITE_OK) << sqlite3_errmsg(database);
-    }
-
-    std::filesystem::path directory_;
-    std::filesystem::path path_;
-};
+using test::expectRegionEqual;
+using StorageTest = test::DatabaseFixture;
 
 TEST_F(StorageTest, NewDatabaseStartsEmpty)
 {
@@ -188,6 +145,55 @@ TEST_F(StorageTest, FutureSchemaIsRejectedWithoutErasingRegions)
     expectRegionEqual(loaded.front(), original);
 }
 
+TEST_F(StorageTest, EveryOperationChecksSchemaVersionAfterConnectionWasOpened)
+{
+    SqliteStore store(path_);
+    const auto original = makeRegion();
+    store.save({original});
+    for (const auto version : {0, 99}) {
+        executeRaw("PRAGMA user_version = " + std::to_string(version));
+        EXPECT_THROW(static_cast<void>(store.load()), std::runtime_error);
+        EXPECT_THROW(store.save({}), std::runtime_error);
+        executeRaw("PRAGMA user_version = 1");
+        const auto loaded = store.load();
+        ASSERT_EQ(loaded.size(), 1);
+        expectRegionEqual(loaded.front(), original);
+    }
+    store.save({});
+    EXPECT_TRUE(store.load().empty());
+}
+
+TEST_F(StorageTest, OversizedSavePreservesExistingSnapshot)
+{
+    SqliteStore store(path_);
+    const auto original = makeRegion();
+    store.save({original});
+    const std::vector<Region> oversized(storage::max_regions + 1, original);
+    EXPECT_THROW(store.save(oversized), storage::SnapshotLimitError);
+    const auto loaded = store.load();
+    ASSERT_EQ(loaded.size(), 1);
+    expectRegionEqual(loaded.front(), original);
+}
+
+TEST_F(StorageTest, OversizedLoadIsRejectedBeforeRegionRowsAreMaterialized)
+{
+    SqliteStore store(path_);
+    executeRaw(
+        "WITH RECURSIVE ids(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM ids WHERE id < " +
+        std::to_string(storage::max_regions + 1) +
+        ") "
+        "INSERT INTO regions (level, dimension, name, min_x, min_y, min_z, max_x, max_y, max_z, priority, owner) "
+        "SELECT 'world', 'minecraft:overworld', 'region-' || id, 0, 0, 0, 'invalid-coordinate', 0, 0, 0, 'owner' "
+        "FROM ids");
+    EXPECT_THROW(static_cast<void>(store.load()), storage::SnapshotLimitError);
+    executeRaw("DELETE FROM regions WHERE id > 1");
+    EXPECT_THROW(static_cast<void>(store.load()), std::runtime_error);
+    executeRaw("UPDATE regions SET max_x = 0");
+    const auto loaded = store.load();
+    ASSERT_EQ(loaded.size(), 1);
+    EXPECT_EQ(loaded.front().key.name, "region-1");
+}
+
 TEST_F(StorageTest, UnknownStoredFlagIsRejectedWithoutDiscardingIt)
 {
     SqliteStore store(path_);
@@ -233,5 +239,5 @@ TEST_F(StorageTest, CreatesParentDirectoryAndSupportsUnicodePaths)
     expectRegionEqual(loaded.front(), makeRegion());
 }
 
-}  // namespace
-}  // namespace dimenguard
+}
+}

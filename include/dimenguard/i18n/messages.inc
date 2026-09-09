@@ -1,4 +1,3 @@
-// Each entry defines one message in both supported locales.
 DG_MESSAGE(Help, "Commands", "Comandos")
 DG_MESSAGE(HelpSelection, "Selection", "Selección")
 DG_MESSAGE(HelpRegions, "Regions", "Regiones")
@@ -58,6 +57,24 @@ DG_MESSAGE(FlagContainerDescription, "Opening interactions for recognized block 
 DG_MESSAGE(FlagPvpDescription, "Damage between players when the attacker can be identified.",
            "Daño entre jugadores cuando se puede identificar al atacante.")
 DG_MESSAGE(FlagStates, "States: {0}.", "Estados: {0}.")
+DG_MESSAGE(FlagExplosionsDescription, "Reported explosion block destruction and damage.",
+           "Destrucción de bloques y daño por explosiones registrados.")
+DG_MESSAGE(FlagFluidFlowDescription, "Reported fluid flow at its source and destination.",
+           "Flujo registrado de fluidos en origen y destino.")
+DG_MESSAGE(FlagBlockFormDescription, "Lava solidification only; other block formation is not covered.",
+           "Solo solidificación de lava; no cubre otras formaciones.")
+DG_MESSAGE(FlagLeafDecayDescription, "Reported natural leaf decay.", "Desaparición natural de hojas registrada.")
+DG_MESSAGE(FlagActorGriefingDescription, "Reported actor-driven block changes.",
+           "Cambios de bloques registrados causados por entidades.")
+DG_MESSAGE(FlagMobSpawningDescription, "Added non-player mobs are removed when denied.",
+           "Elimina mobs al añadirse si se deniega; no afecta a jugadores.")
+DG_MESSAGE(FlagMobDamageDescription, "Damage to players attributed to a mob.", "Daño a jugadores atribuido a un mob.")
+DG_MESSAGE(FlagEntryDescription, "Entering on reported moves/teleports; portal coverage is incomplete.",
+           "Entrada por movimientos/teletransportes registrados; portales parciales.")
+DG_MESSAGE(FlagExitDescription, "Leaving on reported moves/teleports; portal coverage is incomplete.",
+           "Salida por movimientos/teletransportes registrados; portales parciales.")
+DG_MESSAGE(FlagDefaults, "Defaults: build/interact/container-access require membership; all other flags allow.",
+           "Por defecto: build/interact/container-access exigen membresía; las demás flags permiten.")
 DG_MESSAGE(FlagSyntax, "Usage: {0}", "Uso: {0}")
 DG_MESSAGE(FlagExample, "Example: /dg flag spawn pvp deny", "Ejemplo: /dg flag spawn pvp deny")
 DG_MESSAGE(RegionFlags, "Region '{0}': stored flags", "Región '{0}': flags guardadas")

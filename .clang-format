@@ -1,4 +1,5 @@
 BasedOnStyle: Microsoft
+FixNamespaceComments: false
 AccessModifierOffset: -4
 AlignEscapedNewlines: Left
 AlignOperands: AlignAfterOperator

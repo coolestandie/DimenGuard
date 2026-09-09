@@ -1,4 +1,6 @@
+#include "dimenguard/region/protection_policy.h"
 #include "dimenguard/region/region.h"
+#include "dimenguard/region/region_index.h"
 #include "dimenguard/region/region_manager.h"
 
 #include <algorithm>
@@ -8,6 +10,7 @@
 #include <random>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -186,6 +189,94 @@ TEST(RegionManager, CopiedIndexUsesItsOwnRegionStorage)
     EXPECT_FALSE(copy.isAllowed(overworld, {0, 0, 0}, Flag::Build, "stranger-id"));
 }
 
+TEST(RegionManager, DimensionListingIsNameSortedAndIndependentOfPriority)
+{
+    auto last = makeRegion("zeta");
+    last.priority = 99;
+    auto first = makeRegion("alpha");
+    first.priority = -99;
+    auto middle = makeRegion("middle");
+    const auto nether_region = makeRegion("alpha", nether);
+    RegionManager manager;
+    manager.replaceAll({last, nether_region, middle, first, makeRegion("alpha", other_level)});
+    const auto regions = manager.inDimension(overworld);
+    ASSERT_EQ(regions.size(), 3);
+    EXPECT_EQ(regions[0]->key.name, "alpha");
+    EXPECT_EQ(regions[1]->key.name, "middle");
+    EXPECT_EQ(regions[2]->key.name, "zeta");
+    for (const auto *region : regions) {
+        EXPECT_EQ(region->key.dimension, overworld);
+        EXPECT_EQ(manager.find(region->key), region);
+    }
+    const auto alternate = manager.inDimension(nether);
+    ASSERT_EQ(alternate.size(), 1);
+    EXPECT_EQ(alternate.front()->key, nether_region.key);
+    EXPECT_TRUE(manager.inDimension({"missing-level", "minecraft:overworld"}).empty());
+    manager.replaceAll({nether_region});
+    EXPECT_TRUE(manager.inDimension(overworld).empty());
+    EXPECT_EQ(manager.inDimension(nether).size(), 1);
+}
+
+TEST(RegionManager, CopyAssignmentReplacesEveryLookupWithIndependentStorage)
+{
+    RegionManager source;
+    const auto region = makeRegion();
+    source.replaceAll({region});
+    RegionManager destination;
+    destination.replaceAll({makeRegion("old", nether)});
+    destination = source;
+    source.replaceAll({});
+    const auto matches = destination.query(overworld, {0, 0, 0});
+    ASSERT_EQ(matches.size(), 1);
+    EXPECT_EQ(matches.front(), &destination.getAll().front());
+    EXPECT_EQ(destination.inDimension(overworld), matches);
+    EXPECT_TRUE(destination.inDimension(nether).empty());
+    EXPECT_EQ(destination.find({nether, "old"}), nullptr);
+}
+
+TEST(RegionManager, MovesAndSwapsKeepSnapshotsAndIndicesTogether)
+{
+    static_assert(std::is_nothrow_move_constructible_v<RegionManager>);
+    static_assert(std::is_nothrow_move_assignable_v<RegionManager>);
+    RegionManager source;
+    source.replaceAll({makeRegion()});
+    RegionManager moved(std::move(source));
+    EXPECT_TRUE(source.getAll().empty());
+    EXPECT_TRUE(source.query(overworld, {0, 0, 0}).empty());
+    ASSERT_EQ(moved.query(overworld, {0, 0, 0}).size(), 1);
+    EXPECT_EQ(moved.query(overworld, {0, 0, 0}).front(), &moved.getAll().front());
+    RegionManager assigned;
+    assigned.replaceAll({makeRegion("previous", nether)});
+    assigned = std::move(moved);
+    EXPECT_TRUE(moved.inDimension(overworld).empty());
+    EXPECT_TRUE(moved.getAll().empty());
+    EXPECT_TRUE(assigned.inDimension(nether).empty());
+    ASSERT_EQ(assigned.inDimension(overworld).size(), 1);
+    EXPECT_EQ(assigned.inDimension(overworld).front(), &assigned.getAll().front());
+    source.replaceAll({makeRegion("alternate", nether)});
+    std::swap(source, assigned);
+    EXPECT_TRUE(source.query(nether, {0, 0, 0}).empty());
+    ASSERT_EQ(source.query(overworld, {0, 0, 0}).size(), 1);
+    EXPECT_EQ(source.query(overworld, {0, 0, 0}).front(), &source.getAll().front());
+    EXPECT_TRUE(assigned.inDimension(overworld).empty());
+    ASSERT_EQ(assigned.inDimension(nether).size(), 1);
+    EXPECT_EQ(assigned.inDimension(nether).front()->key.name, "alternate");
+}
+
+TEST(RegionIndex, SnapshotGeometryDoesNotBorrowRegionLifetimes)
+{
+    RegionIndex index;
+    {
+        std::vector<Region> regions{makeRegion()};
+        index.replaceAll(regions);
+        regions.front().bounds = Bounds::between({1000, 0, 1000}, {1010, 10, 1010});
+    }
+    EXPECT_EQ(index.query(overworld, {0, 0, 0}), std::vector<std::size_t>{0});
+    EXPECT_TRUE(index.query(overworld, {1005, 5, 1005}).empty());
+    index.replaceAll({});
+    EXPECT_TRUE(index.query(overworld, {0, 0, 0}).empty());
+}
+
 TEST(RegionManager, IndexMatchesBruteForceAcrossNegativeCoordinatesAndOverlaps)
 {
     std::mt19937 random(48311);
@@ -236,6 +327,49 @@ TEST(RegionManager, WorldSizedRegionsDoNotExpandIntoChunkEntries)
     manager.replaceAll(regions);
     EXPECT_EQ(manager.query(overworld, {minimum, minimum, minimum}).size(), 20);
     EXPECT_EQ(manager.query(overworld, {maximum, maximum, maximum}).size(), 20);
+}
+
+TEST(RegionManager, TenThousandPlotRegionsResolveExactTargetsAndGaps)
+{
+    std::vector<Region> regions;
+    regions.reserve(10000);
+    for (int z = 0; z < 100; ++z) {
+        for (int x = 0; x < 100; ++x) {
+            const int number = z * 100 + x;
+            auto region = makeRegion("plot-" + std::to_string(number), number % 3 == 0 ? nether : overworld);
+            const BlockPosition min{x * 32 - 1600, -64, z * 32 - 1600};
+            region.bounds = {min, {min.x + 15, 319, min.z + 15}};
+            regions.push_back(std::move(region));
+        }
+    }
+    RegionManager manager;
+    manager.replaceAll(std::move(regions));
+    EXPECT_EQ(manager.inDimension(overworld).size(), 6666);
+    EXPECT_EQ(manager.inDimension(nether).size(), 3334);
+    for (const auto &region : manager.getAll()) {
+        const auto &dimension = region.key.dimension;
+        const auto &min = region.bounds.min;
+        const auto matches = manager.query(dimension, {min.x + 8, 64, min.z + 8});
+        ASSERT_EQ(matches.size(), 1);
+        EXPECT_EQ(matches.front(), &region);
+        EXPECT_TRUE(manager.query(dimension, {min.x + 16, 64, min.z + 8}).empty());
+        EXPECT_TRUE(manager.query(dimension, {min.x + 8, 320, min.z + 8}).empty());
+    }
+}
+
+TEST(ProtectionPolicy, ResolvesValidatedMatchesWithoutOwningAnIndex)
+{
+    auto high = makeRegion("high");
+    high.priority = 10;
+    auto low = makeRegion("low");
+    low.flags[Flag::Build] = FlagState::Deny;
+    const std::array<const Region *, 2> matches{&high, &low};
+    EXPECT_FALSE(ProtectionPolicy::isAllowed(matches, Flag::Build, "owner-id"));
+    EXPECT_TRUE(ProtectionPolicy::isAllowed(matches, Flag::Build, "owner-id", true));
+    high.flags[Flag::Build] = FlagState::Allow;
+    EXPECT_TRUE(ProtectionPolicy::isAllowed(matches, Flag::Build, "stranger-id"));
+    EXPECT_THROW(static_cast<void>(ProtectionPolicy::isAllowed({}, static_cast<Flag>(999), "owner-id", true)),
+                 std::invalid_argument);
 }
 
 TEST(RegionPolicy, OutsideRegionsIsAllowed)
@@ -359,5 +493,5 @@ TEST(RegionPolicy, ExtremePrioritiesAreOrderedWithoutOverflow)
     EXPECT_TRUE(manager.isAllowed(overworld, {0, 0, 0}, Flag::Build, "stranger-id"));
 }
 
-}  // namespace
-}  // namespace dimenguard
+}
+}

@@ -1,9 +1,11 @@
 #pragma once
 
 #include "dimenguard/region/region_manager.h"
+#include "dimenguard/storage/limits.h"
 #include "dimenguard/storage/sqlite_store.h"
 
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <functional>
 #include <stdexcept>
@@ -34,11 +36,12 @@ private:
  */
 class RegionService {
 public:
-    static constexpr std::size_t MaxRegions = 10000;
+    static constexpr std::size_t MaxRegions = storage::max_regions;
 
     explicit RegionService(const std::filesystem::path &path);
 
     [[nodiscard]] const RegionManager &getRegions() const noexcept;
+    [[nodiscard]] std::uint64_t getRegionNamesRevision() const noexcept;
     void reload();
     void create(Region region);
     void erase(const RegionKey &key);
@@ -53,6 +56,7 @@ private:
 
     SqliteStore store_;
     RegionManager regions_;
+    std::uint64_t region_names_revision_ = 0;
 };
 
-}  // namespace dimenguard
+}

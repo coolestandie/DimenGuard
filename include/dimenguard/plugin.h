@@ -1,7 +1,7 @@
 #pragma once
 
 #include "dimenguard/command/selection.h"
-#include "dimenguard/i18n/messenger.h"
+#include "dimenguard/presentation/messenger.h"
 #include "dimenguard/service/region_service.h"
 
 #include <endstone/plugin/plugin.h>
@@ -11,6 +11,7 @@ namespace dimenguard {
 
 class CommandHandler;
 class ProtectionListener;
+class CommandSuggestionsListener;
 
 class DimenGuardPlugin : public endstone::Plugin {
 public:
@@ -25,6 +26,7 @@ public:
     [[nodiscard]] Messenger &getMessenger() { return messenger_; }
     [[nodiscard]] SelectionManager &getSelections() { return selections_; }
     void reloadRegions();
+    void refreshRegionSuggestions() noexcept;
 
 private:
     std::unique_ptr<RegionService> service_;
@@ -32,6 +34,7 @@ private:
     SelectionManager selections_;
     std::unique_ptr<CommandHandler> commands_;
     std::unique_ptr<ProtectionListener> protection_;
+    std::unique_ptr<CommandSuggestionsListener> suggestions_;
 };
 
-}  // namespace dimenguard
+}

@@ -14,6 +14,7 @@ endif ()
 include(CTest)
 include(FetchContent)
 option(DIMENGUARD_BUILD_PLUGIN "Build the Endstone plugin" ON)
+option(DIMENGUARD_BUILD_BENCHMARKS "Build offline performance benchmarks" OFF)
 
 if (DIMENGUARD_BUILD_PLUGIN AND UNIX)
     # Every C++ library crossing the plugin boundary must share the server's STL ABI.
@@ -31,7 +32,11 @@ endfunction()
 
 add_library(dimenguard_core STATIC
         src/region/region.cpp
+        src/region/flag.cpp
         src/region/region_manager.cpp
+        src/region/region_index.cpp
+        src/region/protection_policy.cpp
+        src/region/transition_policy.cpp
 )
 target_include_directories(dimenguard_core PUBLIC include)
 target_compile_features(dimenguard_core PUBLIC cxx_std_20)
@@ -49,11 +54,26 @@ target_link_libraries(dimenguard_sqlite PRIVATE Threads::Threads ${CMAKE_DL_LIBS
 
 add_library(dimenguard_services STATIC
         src/storage/sqlite_store.cpp
+        src/storage/sqlite.cpp
+        src/storage/schema.cpp
         src/service/region_service.cpp
         src/command/catalog.cpp
-        src/i18n/translator.cpp)
+        src/command/arguments.cpp
+        src/protocol/binary_stream.cpp
+        src/protocol/command_suggestions.cpp
+        src/i18n/translator.cpp
+        src/presentation/theme.cpp
+        src/presentation/panel.cpp
+        src/presentation/help_panel.cpp
+        src/presentation/flag_panel.cpp)
 target_link_libraries(dimenguard_services PUBLIC dimenguard_core dimenguard_sqlite)
 dimenguard_warnings(dimenguard_services)
+
+if (DIMENGUARD_BUILD_BENCHMARKS)
+    add_executable(dimenguard_benchmarks benchmarks/region_benchmarks.cpp)
+    target_link_libraries(dimenguard_benchmarks PRIVATE dimenguard_services)
+    dimenguard_warnings(dimenguard_benchmarks)
+endif ()
 
 if (DIMENGUARD_BUILD_PLUGIN)
     # Use the small, hash-verified release package instead of repository history.
@@ -70,8 +90,24 @@ if (DIMENGUARD_BUILD_PLUGIN)
     endstone_add_plugin(dimenguard
             src/plugin.cpp
             src/command/command_handler.cpp
-            src/i18n/messenger.cpp
-            src/listener/protection_listener.cpp)
+            src/command/context.cpp
+            src/command/handlers/general_commands.cpp
+            src/command/handlers/selection_commands.cpp
+            src/command/handlers/region_commands.cpp
+            src/command/handlers/flag_commands.cpp
+            src/command/handlers/membership_commands.cpp
+            src/presentation/messenger.cpp
+            src/listener/protection_listener.cpp
+            src/listener/command_suggestions_listener.cpp
+            src/listener/block_listener.cpp
+            src/listener/player_interaction_listener.cpp
+            src/listener/actor_listener.cpp
+            src/listener/player_session_listener.cpp
+            src/listener/world_block_listener.cpp
+            src/listener/explosion_listener.cpp
+            src/listener/mob_listener.cpp
+            src/listener/player_movement_listener.cpp
+            src/protection/protection_context.cpp)
     target_include_directories(dimenguard PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
     target_link_libraries(dimenguard PRIVATE dimenguard_services)
     dimenguard_warnings(dimenguard)
@@ -85,7 +121,8 @@ if (BUILD_TESTING)
             GIT_SHALLOW TRUE)
     FetchContent_MakeAvailable(googletest)
     add_executable(dimenguard_tests tests/region_test.cpp tests/storage_test.cpp tests/service_test.cpp
-            tests/presentation_test.cpp tests/selection_test.cpp tests/coordinates_test.cpp tests/command_test.cpp)
+            tests/presentation_test.cpp tests/selection_test.cpp tests/coordinates_test.cpp tests/command_test.cpp
+            tests/sqlite_test.cpp tests/protocol_test.cpp tests/world_policy_test.cpp)
     target_link_libraries(dimenguard_tests PRIVATE dimenguard_services GTest::gtest_main)
     dimenguard_warnings(dimenguard_tests)
     include(GoogleTest)
