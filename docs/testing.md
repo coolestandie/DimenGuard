@@ -31,6 +31,9 @@ rejected by native enums. These probes prove native routing, not player-side exe
 guards prevented mutations. The region database matched its pre-update backup byte-for-byte.
 Client suggestions and execution of the corrected commands still need in-game acceptance.
 
+The new modular/13-flag/live-region-completion checkpoint has not been deployed. The preceding
+parser observations describe the earlier four-flag build, not this checkpoint.
+
 Use a disposable world or a restorable copy. Before testing, record:
 
 | Field | Value |
@@ -66,7 +69,8 @@ authoritative world change. Mark unsupported cases as limitations, not passing p
   containing spaces. Check the response uses their display name and membership stays UUID-based.
   Reject offline names, partial matches, UUID input and selectors such as `@a`.
 - [ ] Reconnect after installing the updated DLL. Check suggestions for `/dg`, `/dg region`,
-  `/dg flag spawn`, `/dg language` and `/dg trust spawn`. Region names are entered manually.
+  `/dg flag spawn`, `/dg language` and `/dg trust spawn`. Check existing region-name suggestions
+  in the current dimension, create/rename/delete refresh, dimension switches and numeric-only names.
 - [ ] Confirm `region` appears only once among the root suggestions. Execute every region action,
   not only `help dg`: `list`, `list 1`, `info spawn`, and create/rename/priority/delete on a disposable
   region. Verify missing/extra arguments and invalid integers are rejected without changing data.
@@ -180,6 +184,21 @@ authoritative world change. Mark unsupported cases as limitations, not passing p
   Compare sparse regions with many overlapping regions. Snapshot saves are synchronous; avoid
   inferring latency guarantees from the 10,000-region limit or from offline test speed.
 
+## Advanced world and movement acceptance
+
+- [ ] Set `explosions deny`; test origins inside/outside and explosions whose affected blocks
+  cross the boundary. Verify whole-event cancellation and victim damage separately.
+- [ ] Test `fluid-flow` at both source and destination, `block-form` for lava solidification,
+  and `leaf-decay` before/after setting inherit. Record instant-ticking gaps separately.
+- [ ] Test reported actor griefing, non-player mob spawning and attributed mob-to-player damage.
+  Players/items/projectiles must not be mistakenly removed by `mob-spawning`.
+- [ ] Verify every added environmental flag defaults to allow in an existing region and obeys
+  explicit priority/deny-tie rules without player membership or operator bypass.
+- [ ] Verify `entry`/`exit` on reported moves and same-dimension teleports. Moving within the
+  same region must remain possible. Test owners, bypass and overlapping changed region sets.
+- [ ] Record portals, respawn, cross-dimension teleports and tiny movement as known incomplete
+  entry/exit paths, not successful exclusion tests. There is no automatic corrective teleport.
+
 Complete a runtime record before calling this alpha ready for a server's intended protection
-requirements. Advanced world hooks and a third-party plugin API require separate implementation
-and verification phases.
+requirements. Additional WorldGuard-inspired flags remain planned in
+[flag-roadmap.md](flag-roadmap.md), not implemented merely by appearing in that document.

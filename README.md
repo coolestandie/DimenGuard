@@ -1,7 +1,7 @@
 # DimenGuard
 
 DimenGuard is a C++20 region-protection plugin for **Endstone API 0.12**. Regions belong to a
-specific level and dimension, with shared rules for building, interaction, container access and PvP.
+specific level and dimension, with shared rules for player actions, world events and reported movement.
 
 This is an **alpha**. Offline tests cover the domain and supporting services; the Bedrock runtime
 checks in [testing.md](docs/testing.md) remain pending. It does not provide complete WorldGuard
@@ -90,15 +90,20 @@ grant it explicitly through your permission system if an account should bypass r
 An operator with command access still follows protection rules unless explicitly granted bypass.
 The console can use help, reload and the flag catalog; commands needing a dimension require an in-game player.
 
-Native command parameters suggest subcommands, flags, states, languages and online player names.
-After `/dg region `, choose an action; after `/dg flag <region> `, choose a flag. Running `/dg flag`
-without arguments lists the available flags. Region names remain free text: the current public
-Endstone API cannot update their suggestions dynamically.
+On protocol 2169, the public outgoing-packet API supplies exact client command paths, flags,
+states, languages, online players and existing region names in the current dimension. Suggestions
+refresh after successful create, rename, delete, reload and dimension changes. Running `/dg flag`
+lists supported flags. New names remain free text, including numeric-only names.
+Unsupported protocols and unrecognized packets pass through untouched; commands still work,
+but exact client hints and live region completion are unavailable. This adapter does not modify
+Endstone internals or replace server-side validation.
 
 Region actions share one native overload. Endstone registers a distinct enum symbol for each
 declaration, so separate overloads with the same `region` prefix conflict in Bedrock's parser.
 The native message tail accepts both names and numbers (Bedrock's `str` rejects numeric tokens);
 the handler splits at most two arguments and validates each action's required values and integers.
+Flag and membership commands use the same bounded parser, with up to three flag arguments,
+so numeric region names and quoted player names reach the handler consistently.
 Detailed help syntax and suggested actions
 come from the same command catalog. Metadata registration alone is not a runtime parsing test.
 
@@ -117,6 +122,14 @@ limited to one per player per second; this does not delay protection decisions.
 | `interact` | Supported targeted block and actor interactions. | Owner/member access. |
 | `container-access` | Opening interactions for recognized block containers. | Owner/member access. |
 | `pvp` | Player-attributed damage between players. | Allowed. |
+| `explosions` | Reported explosion origin/affected blocks and explosion damage at victims. | Allowed. |
+| `fluid-flow` | Reported liquid spread, checking both source and destination. | Allowed. |
+| `block-form` | Reported lava solidification, not all block formation. | Allowed. |
+| `leaf-decay` | Reported leaf removal through decay. | Allowed. |
+| `actor-griefing` | Reported actor changes to a block. | Allowed. |
+| `mob-spawning` | Non-player mobs added to the level; denial removes the added mob. | Allowed. |
+| `mob-damage` | Attributed non-player mob damage to a player. | Allowed. |
+| `entry`, `exit` | Region crossings reported by move/same-dimension teleport events. | Allowed. |
 
 Outside every region, actions are allowed. Inside regions, the policy resolves each flag separately:
 
@@ -125,11 +138,18 @@ Outside every region, actions are allowed. Inside regions, the policy resolves e
    an explicit `allow` grants the action. Lower priorities do not override that decision.
 3. `inherit` clears the region's explicit value, allowing evaluation to continue to lower priorities.
 4. If no priority has an explicit value, `build`, `interact` and `container-access` require ownership
-   or membership in **every overlapping region at the highest priority**. PvP remains allowed.
+   or membership in **every overlapping region at the highest priority**. Other flags remain allowed.
 
 An explicit `deny` therefore also denies owners and members without bypass. A higher-priority
 region with `inherit` does not erase a lower-priority explicit denial. PvP checks both attacker
 and victim locations when both players can be resolved.
+
+Environmental flags do not invent a responsible player, use membership, or inherit an operator's
+bypass. Entry/exit resolve only regions actually entered or left, so moving inside a denied
+region is still possible. Both the exited and entered sets must permit a crossing. A region
+containing both endpoints does not override a newly entered region's entry decision.
+This differs from WorldGuard's region-group defaults: explicit entry/exit denial currently
+affects owners too. Existing policy is preserved pending the planned group-aware expansion.
 
 One player action can emit more than one event. Placing a block may require both `build` at
 the destination and `interact` at the clicked block; setting `build allow` alone does not override
@@ -169,8 +189,15 @@ database; stop the server before replacing a damaged file, then verify a success
 - Block interaction handling covers right-click targets. It deliberately ignores `LeftClickBlock`
   so breaking follows `build`; left-click item-frame and dye-related paths are unverified and
   must not be treated as protected by `interact`.
-- Explosions, pistons, flowing fluids, mob block changes, growth, commands and other plugins'
-  block edits are separate paths. They are not covered by the basic player-action flags.
+- World changes use their own explicit flags, not `build`. Explosion denial cancels the whole
+  reported explosion if its origin or any affected block denies; damage is checked separately.
+  Knockback and every secondary effect are not guaranteed by damage cancellation.
+- Fluid hooks exclude instant-ticking paths. Block formation currently means lava solidification.
+  Actor-griefing events exclude falling blocks and sheep grass consumption.
+- Movement checks cannot prevent every portal, respawn, cross-dimension teleport or tiny
+  unreported movement. There is no speculative teleport rollback or claim of complete exclusion.
+- Exact piston affected-block protection, growth hooks that never fire, commands and other
+  plugins' block edits are not covered by these rules.
 - Doors, beds and other multi-block operations need boundary verification. One exposed event
   target does not prove every secondary block is protected.
 - PvP needs a resolvable responsible player. A disconnected or unloaded projectile shooter can
@@ -181,20 +208,24 @@ database; stop the server before replacing a damaged file, then verify a success
   isolate plugins from one another.
 
 The exact source audit and missing Endstone APIs are documented in
-[event-coverage.md](docs/event-coverage.md). Advanced world protections, custom native hooks
-and a public API for other plugins are deferred.
+[event-coverage.md](docs/event-coverage.md). The larger WorldGuard-inspired flag expansion is
+planned in [flag-roadmap.md](docs/flag-roadmap.md); planned flags are not shipped functionality.
+Custom native hooks and a public API for other plugins remain deferred.
 
 ## Structure
 
 | Directory | Responsibility |
 | --- | --- |
-| `include/dimenguard/region`, `src/region` | Typed cuboids, per-dimension spatial trees and shared protection policy. |
+| `include/dimenguard/region`, `src/region` | Flag definitions, cuboids, spatial index, snapshot manager and separate action/transition policy. |
 | `include/dimenguard/service`, `src/service` | Administrative mutations and consistent live/persisted snapshots. |
 | `include/dimenguard/storage`, `src/storage` | SQLite ownership, schema versioning, validation and transactional persistence. |
-| `include/dimenguard/command`, `src/command` | Checked arguments, player selections and command dispatch. |
+| `include/dimenguard/command`, `src/command` | Shared context/catalog/parser plus focused general, selection, region, flag and membership handlers. |
 | `include/dimenguard/adapter` | Conversion between Endstone handles and domain positions/identities. |
-| `include/dimenguard/listener`, `src/listener` | Concrete public-event adapters and guarded protection decisions. |
-| `include/dimenguard/i18n`, `src/i18n` | Bilingual message catalog, shared palette and delivery. |
+| `include/dimenguard/listener`, `src/listener` | Separate block, interaction, actor, world, explosion, mob, movement, session and command-packet adapters. |
+| `include/dimenguard/protection`, `src/protection` | Shared target conversion, guarded cancellation, failure handling and policy access. |
+| `include/dimenguard/i18n`, `src/i18n` | Locale selection and bilingual message catalog only. |
+| `include/dimenguard/presentation`, `src/presentation` | Shared theme/panels, help, flag rendering and message delivery. |
+| `include/dimenguard/protocol`, `src/protocol` | Bounded protocol-2169 command suggestion codec, independent of Endstone handles. |
 | `tests` | Offline domain, persistence, service and presentation checks. |
 | `docs` | Runtime coverage audit and manual acceptance checklist. |
 

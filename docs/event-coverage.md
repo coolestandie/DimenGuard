@@ -2,7 +2,47 @@
 
 This is a static source audit, performed on 2026-09-08 against Endstone API 0.12.0, checkout `2572cd304b5ca2d094e02a1b2f969f7632ea44f6`. No Bedrock server was started for this audit. A hook found in source is evidence of an intended event path, not a successful runtime protection test or a guarantee about every Bedrock interaction.
 
-Paths below are relative to the Endstone SDK repository, not DimenGuard; `bedrock_hooks/` abbreviates `src/endstone/runtime/bedrock_hooks/`. The integration contracts describe how the basic protection adapter can use the public API. Advanced world protection and native hooks are outside this phase.
+Paths below are relative to the Endstone SDK repository, not DimenGuard; `bedrock_hooks/` abbreviates `src/endstone/runtime/bedrock_hooks/`. The integration contracts describe the implemented public-event adapters. Native hooks remain outside this plugin.
+
+## World and movement adapters
+
+These nine additional state flags are implemented but not yet accepted in-game. They default
+to allow so upgrading does not silently disable autonomous world behavior in existing regions.
+
+| Flag | Concrete source path | Implemented scope and remaining gap |
+| --- | --- | --- |
+| `explosions` | `bedrock_hooks/script_block_gameplay_handler.cpp`, block/actor explosion handlers; `script_actor_gameplay_handler.cpp`, before-hurt | Check origin and each exposed affected block; cancel the whole explosion on denial. Also check victims of `block_explosion` and `entity_explosion` damage. Secondary effects/knockback are not guaranteed. |
+| `fluid-flow` | `bedrock_hooks/liquid_block.cpp`, `_trySpreadTo` | Check both from/to blocks. Instant-ticking paths bypass this hook. |
+| `block-form` | `bedrock_hooks/liquid_block.cpp`, `_solidify` | Lava solidification into cobblestone, obsidian and basalt. Header examples for snow/ice are not evidence of additional firing paths. |
+| `leaf-decay` | `bedrock_hooks/leaves_block.cpp`, `_die` | Cancel the leaf-decay path before drops/removal. |
+| `actor-griefing` | `bedrock_hooks/script_actor_gameplay_handler.cpp`, `ActorGriefingBlockEvent` | Check exposed target block. Falling blocks and sheep grass consumption are excluded; resulting block state is absent. |
+| `mob-spawning` | `bedrock_hooks/script_level_gameplay_handler.cpp`, actor-added event | Restrict non-player Mob instances only. Cancellation despawns an actor already added; no spawn reason is exposed. |
+| `mob-damage` | `bedrock_hooks/script_actor_gameplay_handler.cpp`, before-hurt | Attributed non-player Mob attacking Player; decide at victim. Missing attribution cannot be reconstructed. |
+| `entry`, `exit` | `bedrock_hooks/packet.cpp`, move threshold; `bedrock_hooks/player.cpp`, same-dimension teleport | Resolve changed region sets at reported from/to locations, preserving cancellations. Small movements may not fire. Dimension-change and respawn are after-events, and cross-dimension teleport bypasses the before-event. No complete exclusion or rollback is claimed. |
+
+The shared environmental resolver accepts only environmental flags and has no player identity
+or permission bypass. The move adapter skips unchanged block coordinates/dimension, but does
+not infer that all movement was reported. Actual-position greetings and advanced session rules
+belong to the next planned expansion.
+
+## Missing contracts
+
+- Piston events expose base and direction, not every moved/broken block. Base activation
+  control could be added with that narrower name; it is not full cross-boundary protection.
+- `BlockGrowEvent` is declared but no concrete firing construction was found.
+- Inventory open lacks holder/location, and no concrete inventory click/drag transaction event
+  was found. Opening guards do not protect ongoing or automated transfers.
+- Bed/door multi-block placement exposes one target, not every affected block.
+
+## Live command suggestions
+
+The version-gated adapter rewrites only the plugin-owned `dg` command in packet 76 through
+`PacketSendEvent`. It preserves other commands, aliases, metadata, enum indices and constraints.
+It uses the [protocol-2169 schema](https://github.com/EndstoneMC/protocol-docs/tree/r26_u4):
+fixed uint32 enum-value indices and string command permissions. Malformed, oversized,
+unsupported or conflicting packets pass through without cancellation. Unsupported protocols
+retain native command parsing with less detailed hints. Offline codec tests do not prove client
+autocomplete display; that remains part of final acceptance.
 
 ## Event contracts
 
