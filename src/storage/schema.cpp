@@ -1,5 +1,6 @@
 #include "dimenguard/storage/schema.h"
 
+#include "dimenguard/storage/snapshot.h"
 #include "dimenguard/storage/sqlite.h"
 
 #include <stdexcept>
@@ -7,8 +8,6 @@
 
 namespace dimenguard::storage {
 namespace {
-
-constexpr int schema_version = 1;
 
 int readVersion(const sqlite::Connection &connection)
 {
@@ -27,6 +26,18 @@ void checkVersion(int version)
     }
 }
 
+void createGroupSchema(const sqlite::Connection &connection)
+{
+    connection.execute(R"sql(
+        CREATE TABLE flag_groups (
+            region_id INTEGER NOT NULL REFERENCES regions(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            group_name TEXT NOT NULL,
+            PRIMARY KEY (region_id, name)
+        );
+    )sql");
+}
+
 }
 
 void initializeSchema(const sqlite::Connection &connection)
@@ -35,10 +46,10 @@ void initializeSchema(const sqlite::Connection &connection)
     const auto version = readVersion(connection);
     if (version == 0) {
         {
-            sqlite::Statement query(connection, "SELECT name FROM sqlite_master WHERE type = 'table' "
-                                                "AND name NOT LIKE 'sqlite_%' LIMIT 1");
+            sqlite::Statement query(connection,
+                                    "SELECT name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' LIMIT 1");
             if (query.next()) {
-                throw std::runtime_error("An unversioned database already contains tables; use an empty database "
+                throw std::runtime_error("An unversioned database already contains objects; use an empty database "
                                          "or restore a supported DimenGuard backup.");
             }
         }
@@ -52,6 +63,9 @@ void initializeSchema(const sqlite::Connection &connection)
                 max_x INTEGER NOT NULL, max_y INTEGER NOT NULL, max_z INTEGER NOT NULL,
                 priority INTEGER NOT NULL,
                 owner TEXT NOT NULL,
+                kind TEXT NOT NULL DEFAULT 'cuboid',
+                parent TEXT,
+                passthrough TEXT NOT NULL DEFAULT 'inherit',
                 UNIQUE (level, dimension, name),
                 CHECK (min_x <= max_x AND min_y <= max_y AND min_z <= max_z)
             );
@@ -66,8 +80,30 @@ void initializeSchema(const sqlite::Connection &connection)
                 state TEXT NOT NULL,
                 PRIMARY KEY (region_id, name)
             );
-            PRAGMA user_version = 1;
         )sql");
+        createGroupSchema(connection);
+        connection.execute("PRAGMA user_version = 2");
+    }
+    else if (version == 1) {
+        static_cast<void>(readSnapshot(connection, 1));
+        const auto backup_path = connection.backupBeforeMigration(version);
+        try {
+            connection.execute(R"sql(
+                ALTER TABLE regions ADD COLUMN kind TEXT NOT NULL DEFAULT 'cuboid';
+                ALTER TABLE regions ADD COLUMN parent TEXT;
+                ALTER TABLE regions ADD COLUMN passthrough TEXT NOT NULL DEFAULT 'inherit';
+            )sql");
+            createGroupSchema(connection);
+            connection.execute("PRAGMA user_version = 2");
+            static_cast<void>(readSnapshot(connection, schema_version));
+            transaction.commit();
+            return;
+        }
+        catch (const std::exception &error) {
+            const auto encoded_path = backup_path.u8string();
+            throw std::runtime_error("Schema migration failed; the original backup is at '" +
+                                     std::string(encoded_path.begin(), encoded_path.end()) + "': " + error.what());
+        }
     }
     else {
         checkVersion(version);

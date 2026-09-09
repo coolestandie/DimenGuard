@@ -19,3 +19,29 @@ is separate from the event-query path.
 
 Repeat measurements on deployment hardware and record real server tick timing during final
 acceptance. Do not convert these offline numbers into TPS guarantees.
+
+## WG-1 model measurements
+
+A later local run on 2026-09-08 used the upstream-pinned Windows x64 Clang 19.1.5
+RelWithDebInfo build with the WG-1 hierarchy. These are single-run observations, including
+storage variability, not a controlled before/after benchmark or a server latency guarantee.
+
+| Operation | 100 regions | 1,000 regions | 10,000 regions |
+| --- | ---: | ---: | ---: |
+| Sparse matching query | 0.510 us | 0.355 us | 0.426 us |
+| Query matching every region | 5.783 us | 88.253 us | 1,495.350 us |
+| Full dimension name list | 2.935 us | 17.401 us | 207.110 us |
+| Full policy: 32-level inherited membership | 4.692 us | 4.780 us | 4.911 us |
+| Full policy: 32-level inherited group | 4.037 us | 2.842 us | 3.247 us |
+| Full administrative snapshot change | 33.381 ms | 91.791 ms | 685.941 ms |
+
+The deep-chain dataset contains 31 shared templates and the remaining cuboids, up to 10,000
+total regions. Parent indices are compiled with the snapshot; queries walk indices without
+constructing region keys or searching names for each ancestor. In the initial WG-1 measurement,
+before that change, the 10,000-region deep membership/group cases took 98.667/41.045 us.
+Both runs validated every result; timing variation means these samples do not establish an
+exact speedup ratio.
+
+Full-snapshot administrative saves remain synchronous and expensive at the maximum count.
+The new hierarchy does not remove that existing storage limitation. These timings exclude
+Bedrock event dispatch and do not measure a live server or deeply overlapping parent chains.

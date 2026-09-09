@@ -1,6 +1,7 @@
 #include "dimenguard/service/region_service.h"
 
 #include <algorithm>
+#include <limits>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -77,6 +78,9 @@ void RegionService::reload()
 void RegionService::create(Region region)
 {
     requireValidName(region.key.name);
+    if (region.key.name == global_region_name && region.kind != RegionKind::Global) {
+        throw ServiceError(ServiceErrorCode::InvalidName, "This name is reserved for the dimension's global region.");
+    }
     if (regions_.find(region.key) != nullptr) {
         throw ServiceError(ServiceErrorCode::Exists, "A region with this name already exists in the dimension.");
     }
@@ -89,10 +93,35 @@ void RegionService::create(Region region)
     ++region_names_revision_;
 }
 
+void RegionService::createGlobal(DimensionKey dimension, std::string owner)
+{
+    Region region;
+    region.key = {std::move(dimension), std::string(global_region_name)};
+    region.owner = std::move(owner);
+    region.kind = RegionKind::Global;
+    region.priority = std::numeric_limits<int>::min();
+    create(std::move(region));
+}
+
+void RegionService::createTemplate(DimensionKey dimension, std::string name, std::string owner)
+{
+    Region region;
+    region.key = {std::move(dimension), std::move(name)};
+    region.owner = std::move(owner);
+    region.kind = RegionKind::Template;
+    create(std::move(region));
+}
+
 void RegionService::erase(const RegionKey &key)
 {
     auto candidate = regions_.getAll();
-    candidate.erase(findRegion(candidate, key));
+    const auto found = findRegion(candidate, key);
+    if (std::ranges::any_of(candidate, [&](const Region &region) {
+            return region.key.dimension == key.dimension && region.parent == key.name;
+        })) {
+        throw ServiceError(ServiceErrorCode::HasChildren, "Detach this region's children before deleting it.");
+    }
+    candidate.erase(found);
     replaceSnapshot(std::move(candidate));
     ++region_names_revision_;
 }
@@ -100,48 +129,26 @@ void RegionService::erase(const RegionKey &key)
 void RegionService::rename(const RegionKey &key, std::string name)
 {
     requireValidName(name);
-    mutateRegion(key, [this, &name](Region &region) {
-        const RegionKey renamed{region.key.dimension, name};
-        if (renamed != region.key && regions_.find(renamed) != nullptr) {
-            throw ServiceError(ServiceErrorCode::Exists, "A region with this name already exists in the dimension.");
-        }
-        region.key.name = std::move(name);
-    });
-    ++region_names_revision_;
-}
-
-void RegionService::setPriority(const RegionKey &key, int priority)
-{
-    mutateRegion(key, [priority](Region &region) { region.priority = priority; });
-}
-
-void RegionService::setFlag(const RegionKey &key, Flag flag, FlagState state)
-{
-    static_cast<void>(flagName(flag));
-    static_cast<void>(stateName(state));
-    mutateRegion(key, [flag, state](Region &region) {
-        if (state == FlagState::Inherit) {
-            region.flags.erase(flag);
-        }
-        else {
-            region.flags[flag] = state;
-        }
-    });
-}
-
-void RegionService::setMember(const RegionKey &key, std::string player_id, bool trusted)
-{
-    if (player_id.empty()) {
-        throw std::invalid_argument("Region member identities must not be empty.");
+    auto candidate = regions_.getAll();
+    auto &region = *findRegion(candidate, key);
+    if (region.kind == RegionKind::Global) {
+        throw ServiceError(ServiceErrorCode::InvalidRegionType, "The global region cannot be renamed.");
     }
-    mutateRegion(key, [&player_id, trusted](Region &region) {
-        if (trusted) {
-            region.members.insert(std::move(player_id));
+    if (name == global_region_name && name != key.name) {
+        throw ServiceError(ServiceErrorCode::InvalidName, "This name is reserved for the dimension's global region.");
+    }
+    const RegionKey renamed{key.dimension, name};
+    if (renamed != key && regions_.find(renamed) != nullptr) {
+        throw ServiceError(ServiceErrorCode::Exists, "A region with this name already exists in the dimension.");
+    }
+    region.key.name = name;
+    for (auto &child : candidate) {
+        if (child.key.dimension == key.dimension && child.parent == key.name) {
+            child.parent = name;
         }
-        else {
-            region.members.erase(player_id);
-        }
-    });
+    }
+    replaceSnapshot(std::move(candidate));
+    ++region_names_revision_;
 }
 
 void RegionService::replaceSnapshot(std::vector<Region> regions)

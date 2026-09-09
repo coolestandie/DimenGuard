@@ -27,7 +27,9 @@ void RegionIndex::replaceAll(std::span<const Region> regions)
 {
     RegionIndex replacement;
     for (std::size_t index = 0; index < regions.size(); ++index) {
-        replacement.trees_[regions[index].key.dimension].entries.push_back({regions[index].bounds, index});
+        if (regions[index].kind == RegionKind::Cuboid) {
+            replacement.trees_[regions[index].key.dimension].entries.push_back({regions[index].bounds, index});
+        }
     }
     for (auto &[dimension, tree] : replacement.trees_) {
         buildNode(tree, 0, tree.entries.size());

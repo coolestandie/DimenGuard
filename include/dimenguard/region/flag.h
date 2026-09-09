@@ -50,6 +50,14 @@ enum class FlagDefault {
     Deny
 };
 
+enum class RegionGroup {
+    All,
+    Members,
+    Owners,
+    NonMembers,
+    NonOwners
+};
+
 [[nodiscard]] std::string_view flagName(Flag flag);
 [[nodiscard]] FlagScope flagScope(Flag flag);
 [[nodiscard]] FlagDefault flagDefault(Flag flag);
@@ -59,4 +67,7 @@ enum class FlagDefault {
 [[nodiscard]] std::string_view stateName(FlagState state);
 [[nodiscard]] std::span<const FlagState> supportedFlagStates();
 [[nodiscard]] std::optional<FlagState> parseState(std::string_view name);
+[[nodiscard]] std::string_view regionGroupName(RegionGroup group);
+[[nodiscard]] std::span<const RegionGroup> supportedRegionGroups();
+[[nodiscard]] std::optional<RegionGroup> parseRegionGroup(std::string_view name);
 }

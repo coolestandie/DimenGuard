@@ -1,5 +1,7 @@
 #include "dimenguard/storage/sqlite.h"
 
+#include <atomic>
+#include <chrono>
 #include <limits>
 #include <sqlite3.h>
 #include <stdexcept>
@@ -64,6 +66,49 @@ void Connection::execute(const char *sql) const
     check(sqlite3_exec(database_.get(), sql, nullptr, nullptr, nullptr));
 }
 
+std::filesystem::path Connection::backupBeforeMigration(int schema_version) const
+{
+    const auto *filename = sqlite3_db_filename(database_.get(), "main");
+    if (filename == nullptr || *filename == '\0') {
+        throw std::runtime_error("A schema migration requires a file-backed database for its backup.");
+    }
+    const std::string_view encoded_source(filename);
+    const std::filesystem::path source_path(std::u8string(encoded_source.begin(), encoded_source.end()));
+    static std::atomic<unsigned int> sequence{0};
+    const auto timestamp = std::chrono::system_clock::now().time_since_epoch().count();
+    std::filesystem::path backup_directory;
+    do {
+        backup_directory = source_path;
+        backup_directory += ".v" + std::to_string(schema_version) + "-backup-" + std::to_string(timestamp) + "-" +
+                            std::to_string(sequence++);
+    } while (!std::filesystem::create_directory(backup_directory));
+    const auto backup_path = backup_directory / source_path.filename();
+
+    // SQLite cannot back up a connection with an active write transaction. A separate reader sees
+    // the same committed state because the caller holds BEGIN IMMEDIATE and has not changed it.
+    sqlite3 *source_database = nullptr;
+    const auto result =
+        sqlite3_open_v2(filename, &source_database, SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX, nullptr);
+    const std::unique_ptr<sqlite3, DatabaseCloser> source(source_database);
+    if (result != SQLITE_OK) {
+        throw std::runtime_error("Could not open the migration backup source: " +
+                                 std::string(source ? sqlite3_errmsg(source.get()) : "SQLite allocation failed."));
+    }
+    Connection destination(backup_path);
+    auto *backup = sqlite3_backup_init(destination.database_.get(), "main", source.get(), "main");
+    if (backup == nullptr) {
+        throw std::runtime_error("Could not initialize the migration backup: " +
+                                 std::string(sqlite3_errmsg(destination.database_.get())));
+    }
+    const auto step_result = sqlite3_backup_step(backup, -1);
+    const auto finish_result = sqlite3_backup_finish(backup);
+    if (step_result != SQLITE_DONE || finish_result != SQLITE_OK) {
+        throw std::runtime_error("Could not complete the migration backup: " +
+                                 std::string(sqlite3_errmsg(destination.database_.get())));
+    }
+    return backup_path;
+}
+
 void Connection::check(int result) const
 {
     if (result != SQLITE_OK) {
@@ -98,6 +143,11 @@ void Statement::bind(int index, std::string_view value)
 void Statement::bind(int index, std::int64_t value)
 {
     connection_.check(sqlite3_bind_int64(statement_, index, value));
+}
+
+void Statement::bindNull(int index)
+{
+    connection_.check(sqlite3_bind_null(statement_, index));
 }
 
 bool Statement::next()
@@ -145,6 +195,17 @@ std::string Statement::text(int column) const
         throw std::runtime_error("Could not read a text field: SQLite ran out of memory.");
     }
     return {reinterpret_cast<const char *>(value), static_cast<std::size_t>(sqlite3_column_bytes(statement_, column))};
+}
+
+std::optional<std::string> Statement::optionalText(int column) const
+{
+    if (column < 0 || column >= sqlite3_column_count(statement_)) {
+        throw std::out_of_range("The SQLite column index is outside the result set.");
+    }
+    if (sqlite3_column_type(statement_, column) == SQLITE_NULL) {
+        return std::nullopt;
+    }
+    return text(column);
 }
 
 void Statement::requireType(int column, int expected) const

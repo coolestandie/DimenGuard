@@ -1,4 +1,10 @@
 DG_MESSAGE(Help, "Commands", "Comandos")
+DG_MESSAGE(RegionHasChildren, "Detach this region's children before deleting it.",
+           "Desvincula las regiones hijas antes de eliminar esta región.")
+DG_MESSAGE(InvalidHierarchy, "Invalid hierarchy. Check the parent, priorities and hierarchy depth.",
+           "Jerarquía inválida. Revisa el padre, las prioridades y la profundidad de la jerarquía.")
+DG_MESSAGE(InvalidRegionType, "This operation is not available for the dimension's global region.",
+           "Esta operación no está disponible para la región global de la dimensión.")
 DG_MESSAGE(HelpSelection, "Selection", "Selección")
 DG_MESSAGE(HelpRegions, "Regions", "Regiones")
 DG_MESSAGE(HelpProtection, "Protection", "Protección")
@@ -38,8 +44,8 @@ DG_MESSAGE(Renamed, "Region '{0}' renamed to '{1}'.", "Región '{0}' renombrada 
 DG_MESSAGE(NotFound, "That region does not exist in this dimension.", "Esa región no existe en esta dimensión.")
 DG_MESSAGE(Exists, "That region name already exists in this dimension.",
            "Ese nombre de región ya existe en esta dimensión.")
-DG_MESSAGE(InvalidName, "Use 1-64 lowercase letters, digits, underscores or hyphens for region names.",
-           "Usa de 1 a 64 letras minúsculas, números, guiones o guiones bajos en los nombres.")
+DG_MESSAGE(InvalidName, "Use 1-64 lowercase letters, digits, underscores or hyphens. '__global__' is reserved.",
+           "Usa de 1 a 64 letras minúsculas, números, guiones o guiones bajos. '__global__' está reservado.")
 DG_MESSAGE(InvalidNumber, "The priority must be a valid 32-bit integer.",
            "La prioridad debe ser un entero válido de 32 bits.")
 DG_MESSAGE(List, "Regions in {0}: {1} (page {2}/{3}).", "Regiones en {0}: {1} (página {2}/{3}).")

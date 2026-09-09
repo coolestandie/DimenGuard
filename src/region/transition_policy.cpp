@@ -22,11 +22,11 @@ std::vector<const Region *> difference(std::span<const Region *const> source, st
 }
 
 bool TransitionPolicy::isAllowed(std::span<const Region *const> from, std::span<const Region *const> to,
-                                 std::string_view player_id)
+                                 std::string_view player_id, const RegionContext &context)
 {
     const auto exited = difference(from, to);
     const auto entered = difference(to, from);
-    return ProtectionPolicy::isAllowed(exited, Flag::Exit, player_id) &&
-           ProtectionPolicy::isAllowed(entered, Flag::Entry, player_id);
+    return ProtectionPolicy::isAllowed(exited, Flag::Exit, player_id, false, context) &&
+           ProtectionPolicy::isAllowed(entered, Flag::Entry, player_id, false, context);
 }
 }

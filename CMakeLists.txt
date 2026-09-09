@@ -32,6 +32,7 @@ endfunction()
 
 add_library(dimenguard_core STATIC
         src/region/region.cpp
+        src/region/region_context.cpp
         src/region/flag.cpp
         src/region/region_manager.cpp
         src/region/region_index.cpp
@@ -58,7 +59,10 @@ add_library(dimenguard_services STATIC
         src/storage/sqlite_store.cpp
         src/storage/sqlite.cpp
         src/storage/schema.cpp
+        src/storage/snapshot.cpp
         src/service/region_service.cpp
+        src/service/region_hierarchy_service.cpp
+        src/service/region_policy_service.cpp
         src/command/catalog.cpp
         src/command/arguments.cpp
         src/protocol/binary_stream.cpp
@@ -127,7 +131,7 @@ if (BUILD_TESTING)
     add_executable(dimenguard_tests tests/region_test.cpp tests/storage_test.cpp tests/service_test.cpp
             tests/presentation_test.cpp tests/selection_test.cpp tests/coordinates_test.cpp tests/command_test.cpp
             tests/sqlite_test.cpp tests/protocol_test.cpp tests/world_policy_test.cpp tests/flag_fallback_test.cpp
-            tests/rules_test.cpp)
+            tests/rules_test.cpp tests/wg1_region_test.cpp tests/wg1_storage_test.cpp)
     target_link_libraries(dimenguard_tests PRIVATE dimenguard_services GTest::gtest_main)
     dimenguard_warnings(dimenguard_tests)
     include(GoogleTest)

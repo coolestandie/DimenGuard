@@ -6,6 +6,11 @@ Static audit dated 2026-09-08. The reference is the [WorldGuard flag catalog](ht
 
 ## Preserve existing policy
 
+The unreleased [WG-1 model](region-model.md) now supplies parent/global/template regions,
+state-flag groups and schema 2 internally. Its migration preserves existing region rules;
+new command controls, broader WorldGuard build semantics, typed flags and non-player association
+remain later phases. The release-candidate table below still describes the published preview.
+
 - Keep the current level/dimension identity, region names, ownership, members and saved flag values.
 - `build`, `interact` and `container-access` default to membership. Granular flags use their documented aggregates when unset; independent flags default to allow except `invincible`, whose default deny adds no immunity. Explicit values resolve by descending priority, with deny winning ties. Environmental actions do not invent a responsible player or inherit a player's bypass.
 - Keep action checks independent: allowing one flag does not erase another intercepted stage's denial. Granular flags first resolve their own explicit decisions across all priority tiers, then consult their aggregate only if all inherit. Thus a configured granular value may override a higher-priority aggregate value; leaving the granular flag unset preserves existing policy.

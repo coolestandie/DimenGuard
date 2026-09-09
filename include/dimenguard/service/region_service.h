@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -19,6 +20,9 @@ enum class ServiceErrorCode {
     Exists,
     InvalidName,
     LimitReached,
+    HasChildren,
+    InvalidHierarchy,
+    InvalidRegionType,
 };
 
 class ServiceError : public std::runtime_error {
@@ -44,10 +48,15 @@ public:
     [[nodiscard]] std::uint64_t getRegionNamesRevision() const noexcept;
     void reload();
     void create(Region region);
+    void createGlobal(DimensionKey dimension, std::string owner);
+    void createTemplate(DimensionKey dimension, std::string name, std::string owner);
     void erase(const RegionKey &key);
     void rename(const RegionKey &key, std::string name);
     void setPriority(const RegionKey &key, int priority);
+    void setParent(const RegionKey &key, std::optional<RegionKey> parent);
+    void setPassthrough(const RegionKey &key, FlagState state);
     void setFlag(const RegionKey &key, Flag flag, FlagState state);
+    void setFlagGroup(const RegionKey &key, Flag flag, std::optional<RegionGroup> group);
     void setMember(const RegionKey &key, std::string player_id, bool trusted);
 
 private:

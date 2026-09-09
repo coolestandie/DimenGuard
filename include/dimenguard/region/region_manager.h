@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <map>
+#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -33,12 +34,12 @@ public:
     [[nodiscard]] const Region *find(const RegionKey &key) const;
     [[nodiscard]] std::vector<const Region *> inDimension(const DimensionKey &dimension) const;
 
-    /** Returns matching regions by descending priority, then ascending name. */
+    /** Returns cuboids by descending priority, then ascending name, with the optional global last; no templates. */
     [[nodiscard]] std::vector<const Region *> query(const DimensionKey &dimension, const BlockPosition &position) const;
 
     /**
-     * Explicit flags fall through inherited priority tiers; deny wins ties. Unset granular flags
-     * follow their registered base. Defaults may require membership in every top-priority region;
+     * Parent/group-aware flags resolve by priority; deny wins ties. Unset granular flags
+     * follow their registered base. Defaults require membership in the highest protecting regions;
      * invincible instead defaults to false, including outside regions. Explicit bypass skips this
      * player policy; immunity must be queried through the bypass-independent environmental policy.
      */
@@ -55,6 +56,7 @@ private:
 
     std::vector<Region> regions_;
     std::map<RegionKey, std::size_t> keys_;
+    std::vector<std::optional<std::size_t>> parent_indices_;
     RegionIndex index_;
 };
 

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -22,6 +23,8 @@ public:
     [[nodiscard]] const std::string &getPath() const;
     [[nodiscard]] std::int64_t lastInsertId() const;
     void execute(const char *sql) const;
+    // Call before schema writes while this connection holds a reserved write transaction.
+    [[nodiscard]] std::filesystem::path backupBeforeMigration(int schema_version) const;
 
 private:
     friend class Statement;
@@ -48,11 +51,13 @@ public:
 
     void bind(int index, std::string_view value);
     void bind(int index, std::int64_t value);
+    void bindNull(int index);
     [[nodiscard]] bool next();
     void run();
     [[nodiscard]] std::int64_t integer(int column) const;
     [[nodiscard]] int integer32(int column) const;
     [[nodiscard]] std::string text(int column) const;
+    [[nodiscard]] std::optional<std::string> optionalText(int column) const;
 
 private:
     void requireType(int column, int expected) const;
