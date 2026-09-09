@@ -36,4 +36,11 @@ void Messenger::deny(endstone::Player &player, Message message)
     send(player, message);
 }
 
+void Messenger::sendHelp(endstone::CommandSender &sender) const
+{
+    for (const auto &line : renderHelp(getLocale(sender), sender.hasPermission("dimenguard.command"))) {
+        sender.sendMessage(endstone::Message{line});
+    }
+}
+
 }  // namespace dimenguard

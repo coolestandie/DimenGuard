@@ -61,8 +61,9 @@ and access supported containers by default. Explicit flags can change that behav
 Command keywords, region names, flags and state values use English in either display language.
 Region names accept 1–64 lowercase letters, digits, underscores or hyphens. Region commands
 operate in the executing player's **current level and dimension**; the same name can exist in
-other dimensions. Offline players can be trusted or untrusted by canonical UUID: a nonzero,
-lowercase UUID with hyphens, such as `00000000-0000-4000-8000-000000000001`.
+other dimensions. Trust and untrust accept one online player's full name, case-insensitively.
+Use quotes for names containing spaces. UUID input and selector expressions such as `@a` are
+not supported; UUIDs are still stored internally, so existing ownership and membership are preserved.
 
 | Command | Purpose |
 | --- | --- |
@@ -75,8 +76,8 @@ lowercase UUID with hyphens, such as `00000000-0000-4000-8000-000000000001`.
 | `/dg region info <name>` | Show bounds, priority, owner, membership count and flags. |
 | `/dg region priority <name> <integer>` | Set a signed 32-bit priority; larger numbers take precedence. |
 | `/dg flag <region> <flag> <allow\|deny\|inherit>` | Set or clear an explicit flag. |
-| `/dg trust <region> <exact-online-name-or-canonical-UUID>` | Add a trusted member. |
-| `/dg untrust <region> <exact-online-name-or-canonical-UUID>` | Remove a trusted member. |
+| `/dg trust <region> <player>` | Add an online player as a trusted member. |
+| `/dg untrust <region> <player>` | Remove an online player from the trusted members. |
 | `/dg reload` | Reload stored regions, or retry initialization after a storage failure. |
 | `/dg language <en\|es>` | Choose the message language for the current player session. |
 
@@ -87,10 +88,16 @@ grant it explicitly through your permission system if an account should bypass r
 An operator with command access still follows protection rules unless explicitly granted bypass.
 The console can use help and reload; commands needing a dimension require an in-game player.
 
+Native command parameters suggest subcommands, flags, states, languages and online player names.
+Priority and page arguments use native integer validation. Region names remain free text: the
+current public Endstone API cannot update their suggestions dynamically. Registered usages and
+help rows share one command catalog, so their syntax stays consistent.
+
 Messages use English or Spanish from the player's client locale, with English as the fallback.
 `/dg language` temporarily overrides that choice until disconnect. The shared theme uses
-Bedrock's amethyst, white, muted Netherite gray and dark-gray text colors, adapting the palette
-to the named colors supported by game text. Denial notifications are
+an amethyst `Dimen`, light-gray `Guard`, dark-gray `>` and white message, without brackets.
+Help is a framed command guide with localized categories, descriptions and permission filtering.
+Denial notifications are
 limited to one per player per second; this does not delay protection decisions.
 
 ## Flags and overlapping regions

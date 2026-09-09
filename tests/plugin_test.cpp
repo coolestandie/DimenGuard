@@ -1,3 +1,5 @@
+#include "dimenguard/command/catalog.h"
+
 #include <algorithm>
 #include <endstone/permissions/permission.h>
 #include <endstone/plugin/plugin.h>
@@ -44,8 +46,17 @@ TEST_F(PluginContractTest, CommandMetadataPreservesAliasAndPublicEntryPermission
     EXPECT_EQ(command.getName(), "dg");
     EXPECT_EQ(command.getAliases(), std::vector<std::string>{"dimenguard"});
     EXPECT_EQ(command.getPermissions(), std::vector<std::string>{"dimenguard.use"});
-    EXPECT_EQ(command.getUsages(),
-              std::vector<std::string>{"/dg [action: str] [argument1: str] [argument2: str] [argument3: str]"});
+    auto actual_usages = command.getUsages();
+    auto expected_usages = nativeUsages();
+    std::ranges::sort(actual_usages);
+    std::ranges::sort(expected_usages);
+    ASSERT_EQ(actual_usages.size(), 14);
+    EXPECT_EQ(actual_usages, expected_usages);
+    for (const auto &usage : actual_usages) {
+        EXPECT_EQ(usage.find("argument1"), std::string::npos);
+        EXPECT_EQ(usage.find("[action: str]"), std::string::npos);
+        EXPECT_EQ(usage.find("UUID"), std::string::npos);
+    }
     EXPECT_FALSE(command.isRegistered());
 }
 

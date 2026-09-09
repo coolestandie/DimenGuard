@@ -1,11 +1,23 @@
 // Each entry defines one message in both supported locales.
-DG_MESSAGE(Help,
-           "Commands:\n/dg pos1 | pos2\n/dg region create|delete|info <name>\n/dg region rename <name> <new-name>\n/dg "
-           "region priority <name> <integer>\n/dg region list [page]\n/dg flag <region> <flag> "
-           "<allow|deny|inherit>\n/dg trust|untrust <region> <player-or-UUID>\n/dg reload\n/dg language <en|es>",
-           "Comandos:\n/dg pos1 | pos2\n/dg region create|delete|info <nombre>\n/dg region rename <nombre> "
-           "<nuevo-nombre>\n/dg region priority <nombre> <entero>\n/dg region list [página]\n/dg flag <región> <flag> "
-           "<allow|deny|inherit>\n/dg trust|untrust <región> <jugador-o-UUID>\n/dg reload\n/dg language <en|es>")
+DG_MESSAGE(Help, "Commands", "Comandos")
+DG_MESSAGE(HelpSelection, "Selection", "Selección")
+DG_MESSAGE(HelpRegions, "Regions", "Regiones")
+DG_MESSAGE(HelpProtection, "Protection", "Protección")
+DG_MESSAGE(HelpGeneral, "General", "General")
+DG_MESSAGE(HelpSelectFirst, "Select the first corner.", "Selecciona la primera esquina.")
+DG_MESSAGE(HelpSelectSecond, "Select the second corner.", "Selecciona la segunda esquina.")
+DG_MESSAGE(HelpCreate, "Protect your selection.", "Protege tu selección.")
+DG_MESSAGE(HelpDelete, "Remove a region.", "Elimina una región.")
+DG_MESSAGE(HelpRename, "Change its name.", "Cambia su nombre.")
+DG_MESSAGE(HelpList, "Browse this dimension.", "Consulta esta dimensión.")
+DG_MESSAGE(HelpInfo, "View bounds and rules.", "Consulta límites y reglas.")
+DG_MESSAGE(HelpPriority, "Resolve overlapping regions.", "Resuelve regiones superpuestas.")
+DG_MESSAGE(HelpFlag, "Set allow, deny or inherit.", "Establece allow, deny o inherit.")
+DG_MESSAGE(HelpTrust, "Trust an online player.", "Autoriza a un jugador conectado.")
+DG_MESSAGE(HelpUntrust, "Remove an online member.", "Retira a un miembro conectado.")
+DG_MESSAGE(HelpShow, "Open this command guide.", "Abre esta guía de comandos.")
+DG_MESSAGE(HelpLanguage, "Choose your session language.", "Elige el idioma de tu sesión.")
+DG_MESSAGE(HelpReload, "Reload saved regions.", "Recarga las regiones guardadas.")
 DG_MESSAGE(InvalidPage, "Choose an existing positive page number.", "Elige un número de página positivo que exista.")
 DG_MESSAGE(Usage, "Invalid arguments. Use /dg help for command syntax.",
            "Argumentos inválidos. Usa /dg help para ver la sintaxis.")
@@ -40,8 +52,7 @@ DG_MESSAGE(FlagSet, "Region '{0}': {1} = {2}.", "Región '{0}': {1} = {2}.")
 DG_MESSAGE(InvalidFlag, "Flags: build, interact, container-access, pvp. States: allow, deny, inherit.",
            "Flags: build, interact, container-access, pvp. Estados: allow, deny, inherit.")
 DG_MESSAGE(PrioritySet, "Region '{0}' priority set to {1}.", "Prioridad de la región '{0}' establecida en {1}.")
-DG_MESSAGE(PlayerNotFound, "Specify the exact name of an online player, or their canonical UUID.",
-           "Indica el nombre exacto de un jugador conectado o su UUID canónico.")
+DG_MESSAGE(PlayerNotFound, "Choose one online player by name.", "Elige a un jugador conectado por su nombre.")
 DG_MESSAGE(MemberSet, "Region '{0}': membership updated for {1}.", "Región '{0}': membresía actualizada para {1}.")
 DG_MESSAGE(Reloaded, "Loaded {0} regions from storage.", "Se cargaron {0} regiones del almacenamiento.")
 DG_MESSAGE(LanguageSet, "Language: {0}. This setting lasts for your current session.",

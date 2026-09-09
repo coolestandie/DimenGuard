@@ -77,7 +77,7 @@ void CommandHandler::dispatch(endstone::CommandSender &sender, std::span<const s
     auto &messages = plugin_.getMessenger();
     if (args.empty() || args[0] == "help") {
         require(args.size() <= 1);
-        messages.send(sender, Message::Help);
+        messages.sendHelp(sender);
         return;
     }
     if (args[0] == "language") {
@@ -120,9 +120,9 @@ void CommandHandler::dispatch(endstone::CommandSender &sender, std::span<const s
     }
     else if (args[0] == "trust" || args[0] == "untrust") {
         require(args.size() == 3);
-        const auto id = resolveIdentity(args[2]);
-        service.setMember({dimension, args[1]}, id, args[0] == "trust");
-        messages.send(player, Message::MemberSet, args[1], id);
+        const auto target = resolvePlayer(args[2]);
+        service.setMember({dimension, args[1]}, target->getUniqueId().str(), args[0] == "trust");
+        messages.send(player, Message::MemberSet, args[1], target->getName());
     }
     else {
         throw CommandError(Message::Usage);
@@ -215,14 +215,13 @@ void CommandHandler::showRegion(endstone::Player &player, const std::string &nam
     }
 }
 
-std::string CommandHandler::resolveIdentity(const std::string &name) const
+endstone::NotNull<endstone::Player> CommandHandler::resolvePlayer(std::string_view argument) const
 {
-    if (isCanonicalUuid(name)) {
-        return name;
-    }
-    const auto player = plugin_.getServer().getPlayer(name);
-    require(player && player->getName() == name, Message::PlayerNotFound);
-    return player->getUniqueId().str();
+    const auto name = parsePlayerName(argument);
+    require(name.has_value(), Message::PlayerNotFound);
+    const auto player = plugin_.getServer().getPlayer(std::string(*name));
+    require(player && playerNamesMatch(player->getName(), *name), Message::PlayerNotFound);
+    return endstone::NotNull<endstone::Player>{player};
 }
 
 }  // namespace dimenguard

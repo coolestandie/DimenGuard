@@ -16,6 +16,7 @@ public:
     void setLocale(const endstone::Player &player, Locale locale);
     void forget(const endstone::Player &player);
     void deny(endstone::Player &player, Message message = Message::Denied);
+    void sendHelp(endstone::CommandSender &sender) const;
 
     template <typename... Args>
     void send(endstone::CommandSender &sender, Message message, Args &&...args) const

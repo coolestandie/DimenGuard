@@ -1,7 +1,7 @@
 # Testing DimenGuard
 
-Offline tests and Bedrock runtime acceptance are separate checks. The runtime checklist below
-is **pending**. No server execution or successful runtime protection result is implied by this file.
+Offline tests and Bedrock runtime acceptance are separate checks. The gameplay/client checklist
+below is **pending**. Successful startup alone does not establish runtime protection coverage.
 Read [event-coverage.md](event-coverage.md) for the source audit and known API limitations.
 
 ## Offline checks
@@ -16,6 +16,12 @@ preservation, locale fallback and English/Spanish message parity. They do not re
 event timing, client inventories, projectile attribution or third-party plugin ordering.
 
 ## Runtime test record
+
+Local command smoke check on 2026-09-08: Windows x64, BDS 1.26.45.1, Endstone 0.12.0
+with the matching local fork SDK. The updated DLL loaded one saved region with no registration
+errors, and `plugins` listed only DimenGuard. Console `dg`, `dg help` and `help dg` succeeded;
+native help listed the typed overloads. Client-side suggestions, bilingual chat rendering and
+online-player membership changes have not yet been verified in this deployment.
 
 Use a disposable world or a restorable copy. Before testing, record:
 
@@ -48,8 +54,13 @@ authoritative world change. Mark unsupported cases as limitations, not passing p
   another level. List, inspect, rename and delete in one dimension without changing the others.
 - [ ] Reject invalid/duplicate names, overflowing priorities, invalid pages and unknown flag/state
   values. Verify failed commands leave existing regions unchanged.
-- [ ] Trust and untrust an exact online player name, then repeat using its canonical UUID while the
-  player is offline. Reject malformed/all-zero UUIDs and names that do not resolve exactly.
+- [ ] Trust and untrust one online player by full name, including case variations and quoted names
+  containing spaces. Check the response uses their display name and membership stays UUID-based.
+  Reject offline names, partial matches, UUID input and selectors such as `@a`.
+- [ ] Reconnect after installing the updated DLL. Check suggestions for `/dg`, `/dg region`,
+  `/dg flag spawn`, `/dg language` and `/dg trust spawn`. Region names are entered manually.
+- [ ] Inspect `/dg help` in English and Spanish: framed heading, categorized command rows and
+  no administrative rows for a player without `dimenguard.command`. Verify `DimenGuard >` colors.
 - [ ] Verify an owner without `dimenguard.command` cannot administer regions merely by owning one.
   Verify a non-operator without the command permission cannot create, delete or change flags.
 - [ ] Verify a player with the default `dimenguard.use` can read help and choose their language

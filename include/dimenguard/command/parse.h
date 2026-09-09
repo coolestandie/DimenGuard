@@ -16,22 +16,37 @@ namespace dimenguard {
     return value;
 }
 
-[[nodiscard]] inline bool isCanonicalUuid(std::string_view text)
+/** Native player arguments can retain their outer quotes; only individual names are supported. */
+[[nodiscard]] inline std::optional<std::string_view> parsePlayerName(std::string_view text)
 {
-    if (text.size() != 36) {
+    if (text.size() >= 2 && text.front() == '"' && text.back() == '"') {
+        text = text.substr(1, text.size() - 2);
+    }
+    if (text.empty() || text.front() == '@' || text.front() == ' ' || text.back() == ' ') {
+        return std::nullopt;
+    }
+    for (const unsigned char character : text) {
+        if (character == '"' || character < 32 || character == 127) {
+            return std::nullopt;
+        }
+    }
+    return text;
+}
+
+[[nodiscard]] inline bool playerNamesMatch(std::string_view first, std::string_view second)
+{
+    if (first.size() != second.size()) {
         return false;
     }
-    for (std::size_t i = 0; i < text.size(); ++i) {
-        if (i == 8 || i == 13 || i == 18 || i == 23) {
-            if (text[i] != '-') {
-                return false;
-            }
-        }
-        else if (!((text[i] >= '0' && text[i] <= '9') || (text[i] >= 'a' && text[i] <= 'f'))) {
+    const auto lower = [](unsigned char character) {
+        return character >= 'A' && character <= 'Z' ? character + ('a' - 'A') : character;
+    };
+    for (std::size_t i = 0; i < first.size(); ++i) {
+        if (lower(static_cast<unsigned char>(first[i])) != lower(static_cast<unsigned char>(second[i]))) {
             return false;
         }
     }
-    return text != "00000000-0000-0000-0000-000000000000";
+    return true;
 }
 
 }  // namespace dimenguard

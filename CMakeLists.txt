@@ -50,6 +50,7 @@ target_link_libraries(dimenguard_sqlite PRIVATE Threads::Threads ${CMAKE_DL_LIBS
 add_library(dimenguard_services STATIC
         src/storage/sqlite_store.cpp
         src/service/region_service.cpp
+        src/command/catalog.cpp
         src/i18n/translator.cpp)
 target_link_libraries(dimenguard_services PUBLIC dimenguard_core dimenguard_sqlite)
 dimenguard_warnings(dimenguard_services)
@@ -84,14 +85,14 @@ if (BUILD_TESTING)
             GIT_SHALLOW TRUE)
     FetchContent_MakeAvailable(googletest)
     add_executable(dimenguard_tests tests/region_test.cpp tests/storage_test.cpp tests/service_test.cpp
-            tests/presentation_test.cpp tests/selection_test.cpp tests/coordinates_test.cpp)
+            tests/presentation_test.cpp tests/selection_test.cpp tests/coordinates_test.cpp tests/command_test.cpp)
     target_link_libraries(dimenguard_tests PRIVATE dimenguard_services GTest::gtest_main)
     dimenguard_warnings(dimenguard_tests)
     include(GoogleTest)
     gtest_discover_tests(dimenguard_tests)
     if (DIMENGUARD_BUILD_PLUGIN)
         add_executable(dimenguard_plugin_tests tests/plugin_test.cpp)
-        target_link_libraries(dimenguard_plugin_tests PRIVATE dimenguard endstone::endstone GTest::gtest_main)
+        target_link_libraries(dimenguard_plugin_tests PRIVATE dimenguard dimenguard_services endstone::endstone GTest::gtest_main)
         dimenguard_warnings(dimenguard_plugin_tests)
         gtest_discover_tests(dimenguard_plugin_tests)
     endif ()

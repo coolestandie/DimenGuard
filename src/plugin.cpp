@@ -1,5 +1,6 @@
 #include "dimenguard/plugin.h"
 
+#include "dimenguard/command/catalog.h"
 #include "dimenguard/command/command_handler.h"
 #include "dimenguard/listener/protection_listener.h"
 #include "dimenguard/version.h"
@@ -69,11 +70,13 @@ ENDSTONE_PLUGIN("dimenguard", DIMENGUARD_VERSION, dimenguard::DimenGuardPlugin)
     description = "Dimension-scoped region protection.";
     authors = {"coolestandie"};
     prefix = "DimenGuard";
-    command("dg")
-        .description("Manage DimenGuard regions and language.")
-        .aliases("dimenguard")
-        .usages("/dg [action: str] [argument1: str] [argument2: str] [argument3: str]")
-        .permissions("dimenguard.use");
+    auto &root_command = command("dg")
+                             .description("Manage DimenGuard regions and language.")
+                             .aliases("dimenguard")
+                             .permissions("dimenguard.use");
+    for (const auto &usage : dimenguard::nativeUsages()) {
+        root_command.usages(usage);
+    }
     permission("dimenguard.use")
         .description("Use help and language commands.")
         .default_(endstone::PermissionDefault::True);
