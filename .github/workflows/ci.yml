@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-plugin:
+    name: Windows x64 plugin and tests
+    runs-on: windows-2022
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify Visual Studio build tools
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+          $components = @('Microsoft.VisualStudio.Component.VC.Tools.x86.x64',
+              'Microsoft.VisualStudio.Component.VC.Llvm.Clang',
+              'Microsoft.VisualStudio.Component.VC.CMake.Project')
+          $installation = & $vswhere -latest -products * -requires @components -property installationPath
+          if ($LASTEXITCODE -ne 0 -or -not $installation) {
+              throw 'The runner needs Visual Studio x64 C++ tools, Clang and CMake components.'
+          }
+          $compiler = Join-Path $installation 'VC/Tools/Llvm/x64/bin/clang-cl.exe'
+          $cmake = Join-Path $installation 'Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe'
+          $ninja = Join-Path $installation 'Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe'
+          foreach ($tool in @($compiler, $cmake, $ninja)) {
+              if (-not (Test-Path -LiteralPath $tool -PathType Leaf)) {
+                  throw "Required runner tool is missing: $tool"
+              }
+              & $tool --version
+              if ($LASTEXITCODE -ne 0) { throw "Could not inspect runner tool: $tool" }
+          }
+          $cmakeVersion = [regex]::Match((& $cmake --version | Select-Object -First 1), '\d+\.\d+\.\d+')
+          if (-not $cmakeVersion.Success -or [version]$cmakeVersion.Value -lt [version]'3.29.0') {
+              throw 'The Visual Studio CMake used by build.ps1 must be at least 3.29.'
+          }
+
+      - name: Build pinned upstream plugin and run CTest
+        run: ./scripts/build.ps1 -BuildDirectory build/ci
+
+  linux-core:
+    name: Linux core and services (Clang 18, libc++)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Prepare libc++ and inspect tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y libc++-18-dev libc++abi-18-dev ninja-build
+          clang-18 --version
+          clang++-18 --version
+          cmake --version
+          ninja --version
+          dpkg-query -W libc++-18-dev libc++abi-18-dev
+
+      - name: Configure core-only build
+        run: |
+          cmake -S . -B build/ci -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_C_COMPILER=clang-18 \
+            -DCMAKE_CXX_COMPILER=clang++-18 \
+            -DCMAKE_CXX_FLAGS=-stdlib=libc++ \
+            -DDIMENGUARD_BUILD_PLUGIN=OFF \
+            -DDIMENGUARD_BUILD_BENCHMARKS=OFF \
+            -DBUILD_TESTING=ON
+
+      - name: Build core and services
+        run: cmake --build build/ci --parallel 4
+
+      - name: Run CTest
+        run: ctest --test-dir build/ci --output-on-failure
