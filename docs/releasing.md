@@ -14,9 +14,9 @@ release, select a license, deploy a DLL, modify plugin data or start a server.
   path in the public documentation. Offline checks do not establish Bedrock event coverage.
 - Run the optional offline benchmark if comparing scale behavior. Keep the measured results
   and machine details, without presenting them as a server tick guarantee.
-- Obtain the author's explicit license choice and provide its complete, approved text. Review
-  any applicable third-party redistribution requirements before distributing the binary. The
-  script does not invent a license or determine whether its contents are legally sufficient.
+- Include the author's approved [MIT license](../LICENSE) unchanged. Review applicable
+  third-party redistribution requirements before distributing the binary. The script does not
+  change licensing or determine whether the selected notices are legally sufficient.
 - Check [third-party notices](../THIRD_PARTY_NOTICES.md) against the actual SDK and dependency
   sources resolved for this build. Preserve the complete applicable texts; update the inventory
   when changing dependencies, using a source override or distributing additional tools.
@@ -64,9 +64,9 @@ Rebuild from a clean, verified SDK immediately before packaging. Do not reuse a 
 
 ## Local packaging
 
-First choose and commit the license, third-party notices and public documentation. No license
-has been selected by this guide. `-LicenseFile` is mandatory and the file must already exist and
-contain the approved text; it is copied as `LICENSE` without changing its contents.
+The author has selected MIT for DimenGuard. Commit `LICENSE`, third-party notices and public
+documentation before packaging. `-LicenseFile` is mandatory; pass the repository's `LICENSE`
+file, which is copied without changing its contents.
 
 Build the public candidate in a new directory under the ignored `build/` tree:
 

@@ -282,3 +282,8 @@ Planning notes and agent instructions are local files excluded from version cont
 Prepared [CI checks](docs/ci.md) cover a Windows plugin build and Linux core-only build;
 remote jobs have not yet been run. [Offline scale measurements](docs/performance.md) document
 query and administrative-save costs without claiming server tick performance.
+
+## License
+
+DimenGuard is licensed under the [MIT License](LICENSE), copyright 2026 coolestandie.
+Dependencies retain their respective licenses; see [third-party notices](THIRD_PARTY_NOTICES.md).

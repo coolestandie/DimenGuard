@@ -2,8 +2,8 @@
 
 This document accompanies the Windows x64 DimenGuard plugin DLL. It preserves notices for
 the bundled SQLite implementation and the Endstone API's header-only dependencies used by
-the pinned build. It does **not** select a license for DimenGuard's original code; that license
-must be supplied separately as `LICENSE`.
+the pinned build. DimenGuard's original code uses the [MIT License](LICENSE); the dependencies
+listed here retain their own licenses. Include both documents when distributing the plugin.
 
 ## Dependency inventory
 
