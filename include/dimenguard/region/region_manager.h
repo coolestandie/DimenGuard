@@ -34,6 +34,8 @@ public:
 
     [[nodiscard]] const Region *find(const RegionKey &key) const;
     [[nodiscard]] std::vector<const Region *> inDimension(const DimensionKey &dimension) const;
+    [[nodiscard]] std::vector<const Region *> overlaps(const DimensionKey &dimension, const Bounds &bounds,
+                                                       std::optional<std::string_view> excluded = std::nullopt) const;
 
     /** Returns cuboids by descending priority, then ascending name, with the optional global last; no templates. */
     [[nodiscard]] std::vector<const Region *> query(const DimensionKey &dimension, const BlockPosition &position) const;

@@ -14,8 +14,8 @@ An API version match alone does not guarantee ABI compatibility; custom forks ne
 
 The unreleased WG-1 work adds the [region-model foundation](docs/region-model.md): parent
 inheritance, dimension-global rules, templates, groups and a backed-up schema migration.
-Its new administration controls belong to a later phase; the command reference and public
-preview download below retain their existing scope.
+The published preview download below retains its original scope; the current branch continues
+that model with the unreleased WG-3 administration controls documented below.
 
 The current branch also includes unreleased [WG-2 flag semantics](docs/flag-semantics.md):
 33 registered flags, typed values, TNT/creeper/other explosion filtering, supported nonplayer
@@ -23,6 +23,11 @@ domains, deny-spawn sets and entry/exit denial text. Read that contract for the 
 commands and schema 3 recovery procedure; the reference below describes the published preview.
 WG-2 does not add piston protection or track TNT's original ignition position. Gameplay/client
 acceptance and a separately authorized deployment remain required.
+
+This branch adds the unreleased WG-3 [region administration commands](docs/wg3-commands.md):
+aliases, selection inspection, safe hierarchy edits, overlap diagnostics, console
+level/dimension targeting and generated autocomplete. WG-3 keeps the existing administrative
+permission gate; least-privilege permissions and player claiming remain WG-4 work.
 
 ## Build
 
@@ -87,19 +92,31 @@ Command keywords, region names, flags and state values use English in either dis
 Region names accept 1–64 lowercase letters, digits, underscores or hyphens. Region commands
 operate in the executing player's **current level and dimension**; the same name can exist in
 other dimensions. Trust and untrust accept one online player's full name, case-insensitively.
-Use quotes for names containing spaces. UUID input and selector expressions such as `@a` are
-not supported; UUIDs are still stored internally, so existing ownership and membership are preserved.
+Quote player names or typed flag text containing spaces. Region IDs themselves remain limited
+to lowercase letters, digits, underscores and hyphens. UUID input and selector expressions such
+as `@a` are not supported; UUIDs are still stored internally, so existing ownership and membership
+are preserved.
 
 | Command | Purpose |
 | --- | --- |
 | `/dg help` | Show available commands. |
 | `/dg pos1`, `/dg pos2` | Select the block at the player's current position. |
+| `/dg inspect` | Show regions at the player's current block. |
 | `/dg region create <name>` | Create a region from the current selection. |
-| `/dg region delete <name>` | Delete a region and its stored rules. |
+| `/dg region claim <name>` | Administrative synonym for `create`. |
+| `/dg region delete <name> [confirm]` | Delete a region; confirm to cascade through children. |
 | `/dg region rename <name> <new-name>` | Rename a region in the current dimension. |
+| `/dg region redefine <name>` | Replace a region's bounds with the current selection. |
+| `/dg region move <name> <x> <y> <z>` | Translate a cuboid by checked block offsets. |
 | `/dg region list [page]` | List regions in the current dimension. |
 | `/dg region info <name>` | Show bounds, priority, owner, membership count and flags. |
+| `/dg region flags <name>` | Show all stored values for one region. |
 | `/dg region priority <name> <integer>` | Set a signed 32-bit priority; larger numbers take precedence. |
+| `/dg region set-parent <name> <parent\|none>` | Set or clear a validated parent link. |
+| `/dg region set-passthrough <name> <state>` | Set membership passthrough to `allow`, `deny` or `inherit`. |
+| `/dg region set-flag <name> <flag> <value>` | Set one typed flag value. |
+| `/dg region unset-flag <name> <flag>` | Clear one stored flag override. |
+| `/dg region select <name>` | Load a cuboid into the current selection. |
 | `/dg flags [page]` | Browse all supported flags, six per page, with descriptions and defaults. |
 | `/dg flag` | Open the first flag catalog page with administrative usage. |
 | `/dg flag <region> [flag]` | Read the stored flag states without modifying the region. |
@@ -114,7 +131,10 @@ not supported; UUIDs are still stored internally, so existing ownership and memb
 does not grant that permission. `dimenguard.bypass` defaults to **false, including for operators**;
 grant it explicitly through your permission system if an account should bypass region decisions.
 An operator with command access still follows protection rules unless explicitly granted bypass.
-The console can use help, reload and the flag catalog; commands needing a dimension require an in-game player.
+The console can use help, reload and the flag catalog. Region commands from the console require
+an explicit `<level> <dimension>` after the action; selection-based actions and membership
+commands still require an in-game player. See [WG-3 command administration](docs/wg3-commands.md)
+for examples and confirmation rules.
 
 On protocol 2169, the public outgoing-packet API supplies exact client command paths, flags,
 states, languages, online players and existing region names in the current dimension. Suggestions
@@ -128,7 +148,7 @@ Endstone internals or replace server-side validation.
 Region actions share one native overload. Endstone registers a distinct enum symbol for each
 declaration, so separate overloads with the same `region` prefix conflict in Bedrock's parser.
 The native message tail accepts both names and numbers (Bedrock's `str` rejects numeric tokens);
-the handler splits at most two arguments and validates each action's required values and integers.
+the handler applies action-specific arity and validates required values and integers.
 Flag and membership commands use the same bounded parser, with up to three flag arguments,
 so numeric region names and quoted player names reach the handler consistently.
 Detailed help syntax and suggested actions

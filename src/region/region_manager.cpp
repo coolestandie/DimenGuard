@@ -79,6 +79,23 @@ std::vector<const Region *> RegionManager::inDimension(const DimensionKey &dimen
     return result;
 }
 
+std::vector<const Region *> RegionManager::overlaps(const DimensionKey &dimension, const Bounds &bounds,
+                                                    std::optional<std::string_view> excluded) const
+{
+    std::vector<const Region *> result;
+    for (const auto *region : inDimension(dimension)) {
+        if (region->kind != RegionKind::Cuboid || (excluded && region->key.name == *excluded)) {
+            continue;
+        }
+        if (region->bounds.overlaps(bounds)) {
+            result.push_back(region);
+        }
+    }
+    std::ranges::sort(result,
+                      [](const Region *first, const Region *second) { return first->key.name < second->key.name; });
+    return result;
+}
+
 std::vector<const Region *> RegionManager::query(const DimensionKey &dimension, const BlockPosition &position) const
 {
     const auto indices = index_.query(dimension, position);

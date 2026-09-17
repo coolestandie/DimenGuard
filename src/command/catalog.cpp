@@ -30,20 +30,65 @@ const auto &definitions()
     static const std::array catalog = {
         CommandSpec{"pos1", Section::Selection, Message::HelpSelectFirst, true, {}},
         CommandSpec{"pos2", Section::Selection, Message::HelpSelectSecond, true, {}},
+        CommandSpec{"inspect", Section::Selection, Message::HelpInspect, true, {}},
         CommandSpec{"region create", Section::Regions, Message::HelpCreate, true, {{"name", Kind::Word, false, {}}}},
-        CommandSpec{"region delete", Section::Regions, Message::HelpDelete, true, {{"region", Kind::Word, false, {}}}},
+        CommandSpec{"region claim", Section::Regions, Message::HelpClaim, true, {{"name", Kind::Word, false, {}}}},
+        CommandSpec{"region delete",
+                    Section::Regions,
+                    Message::HelpDelete,
+                    true,
+                    {{"region", Kind::Word, false, {}}, {"confirm", Kind::Word, true, {}}}},
         CommandSpec{"region rename",
                     Section::Regions,
                     Message::HelpRename,
                     true,
                     {{"region", Kind::Word, false, {}}, {"name", Kind::Word, false, {}}}},
+        CommandSpec{
+            "region redefine", Section::Regions, Message::HelpRedefine, true, {{"region", Kind::Word, false, {}}}},
+        CommandSpec{"region move",
+                    Section::Regions,
+                    Message::HelpMove,
+                    true,
+                    {{"region", Kind::Word, false, {}},
+                     {"x", Kind::Integer, false, {}},
+                     {"y", Kind::Integer, false, {}},
+                     {"z", Kind::Integer, false, {}}}},
         CommandSpec{"region list", Section::Regions, Message::HelpList, true, {{"page", Kind::Integer, true, {}}}},
         CommandSpec{"region info", Section::Regions, Message::HelpInfo, true, {{"region", Kind::Word, false, {}}}},
+        CommandSpec{
+            "region flags", Section::Regions, Message::HelpRegionFlags, true, {{"region", Kind::Word, false, {}}}},
         CommandSpec{"region priority",
                     Section::Regions,
                     Message::HelpPriority,
                     true,
                     {{"region", Kind::Word, false, {}}, {"priority", Kind::Integer, false, {}}}},
+        CommandSpec{"region set-parent",
+                    Section::Regions,
+                    Message::HelpSetParent,
+                    true,
+                    {{"region", Kind::Word, false, {}}, {"parent", Kind::Word, false, {}}}},
+        CommandSpec{"region set-passthrough",
+                    Section::Regions,
+                    Message::HelpSetPassthrough,
+                    true,
+                    {{"region", Kind::Word, false, {}},
+                     {"state", Kind::Choice, false,
+                      choicesFor(supportedFlagStates(), [](FlagState state) { return stateName(state); })}}},
+        CommandSpec{"region set-flag",
+                    Section::Regions,
+                    Message::HelpSetFlag,
+                    true,
+                    {{"region", Kind::Word, false, {}},
+                     {"flag", Kind::Choice, false, choicesFor(supportedFlags(), flagName)},
+                     {"value", Kind::Message, false, {}}}},
+        CommandSpec{
+            "region unset-flag",
+            Section::Regions,
+            Message::HelpUnsetFlag,
+            true,
+            {{"region", Kind::Word, false, {}}, {"flag", Kind::Choice, false, choicesFor(supportedFlags(), flagName)}}},
+        CommandSpec{
+            "region select", Section::Regions, Message::HelpSelectRegion, true, {{"region", Kind::Word, false, {}}}},
         CommandSpec{"flag",
                     Section::Protection,
                     Message::HelpFlag,
@@ -71,6 +116,24 @@ const auto &definitions()
                     {{"language", Kind::Choice, false, {"en", "es"}}}},
     };
     return catalog;
+}
+
+std::span<const std::string_view> aliasesFor(std::string_view path)
+{
+    static constexpr std::array<std::string_view, 1> define{"define"};
+    static constexpr std::array<std::string_view, 1> remove{"remove"};
+    static constexpr std::array<std::string_view, 1> set_priority{"set-priority"};
+    static constexpr std::array<std::string_view, 0> none{};
+    if (path == "region create") {
+        return define;
+    }
+    if (path == "region delete") {
+        return remove;
+    }
+    if (path == "region priority") {
+        return set_priority;
+    }
+    return none;
 }
 
 std::string joinChoices(std::span<const std::string_view> choices)
@@ -135,7 +198,9 @@ std::vector<CommandParameter> regionParameters()
     constexpr std::string_view prefix = "region ";
     for (const auto &command : definitions()) {
         if (command.path.starts_with(prefix)) {
-            actions.push_back(command.path.substr(prefix.size()));
+            actions.push_back(std::string_view(command.path).substr(prefix.size()));
+            const auto aliases = aliasesFor(command.path);
+            actions.insert(actions.end(), aliases.begin(), aliases.end());
         }
     }
     // Endstone creates a separate enum symbol for every declaration, even for repeated
@@ -152,12 +217,30 @@ std::span<const CommandSpec> commandCatalog()
     return definitions();
 }
 
+std::span<const std::string_view> commandAliases(std::string_view path)
+{
+    return aliasesFor(path);
+}
+
 std::vector<CommandSpec> clientCommandCatalog()
 {
     std::vector<CommandSpec> catalog;
+    const auto appendAliases = [&catalog](const CommandSpec &command) {
+        catalog.push_back(command);
+        const auto aliases = aliasesFor(command.path);
+        const auto separator = command.path.find(' ');
+        if (separator == std::string::npos) {
+            return;
+        }
+        for (const auto alias : aliases) {
+            auto aliased = command;
+            aliased.path = command.path.substr(0, separator + 1) + std::string(alias);
+            catalog.push_back(std::move(aliased));
+        }
+    };
     for (const auto &command : definitions()) {
         if (command.path != "flag") {
-            catalog.push_back(command);
+            appendAliases(command);
             continue;
         }
         auto query = command;

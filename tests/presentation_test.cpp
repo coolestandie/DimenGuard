@@ -247,7 +247,7 @@ TEST(HelpPanel, StaysBoundedAndResetsEveryLine)
     for (const auto locale : {Locale::English, Locale::Spanish}) {
         for (const bool can_manage : {false, true}) {
             const auto lines = renderHelp(locale, can_manage);
-            EXPECT_LE(lines.size(), 30);
+            EXPECT_LE(lines.size(), 45);
             for (const auto &line : lines) {
                 EXPECT_EQ(line.find('\n'), line.npos);
                 EXPECT_TRUE(line.ends_with(Theme::Reset));

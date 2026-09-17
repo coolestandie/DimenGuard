@@ -25,6 +25,10 @@ SelectionManager &CommandContext::selections() const
 {
     return plugin_.getSelections();
 }
+endstone::Server &CommandContext::server() const
+{
+    return plugin_.getServer();
+}
 endstone::Player &CommandContext::player(endstone::CommandSender &sender) const
 {
     const auto player = sender.as<endstone::Player>();

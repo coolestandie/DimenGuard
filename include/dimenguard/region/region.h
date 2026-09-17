@@ -42,6 +42,7 @@ struct Bounds {
 
     [[nodiscard]] static Bounds between(const BlockPosition &a, const BlockPosition &b);
     [[nodiscard]] bool contains(const BlockPosition &position) const;
+    [[nodiscard]] bool overlaps(const Bounds &other) const;
     bool operator==(const Bounds &) const = default;
 };
 

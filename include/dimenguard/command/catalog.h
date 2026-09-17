@@ -31,7 +31,7 @@ struct CommandParameter {
 };
 
 struct CommandSpec {
-    std::string_view path;
+    std::string path;
     CommandSection section;
     Message description;
     bool requires_admin;
@@ -40,6 +40,7 @@ struct CommandSpec {
 };
 
 [[nodiscard]] std::span<const CommandSpec> commandCatalog();
+[[nodiscard]] std::span<const std::string_view> commandAliases(std::string_view path);
 [[nodiscard]] std::vector<CommandSpec> clientCommandCatalog();
 [[nodiscard]] std::string helpUsage(const CommandSpec &command);
 [[nodiscard]] std::vector<std::string> nativeUsages();

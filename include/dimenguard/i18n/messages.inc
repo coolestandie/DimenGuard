@@ -11,12 +11,37 @@ DG_MESSAGE(HelpProtection, "Protection", "Protección")
 DG_MESSAGE(HelpGeneral, "General", "General")
 DG_MESSAGE(HelpSelectFirst, "Select the first corner.", "Selecciona la primera esquina.")
 DG_MESSAGE(HelpSelectSecond, "Select the second corner.", "Selecciona la segunda esquina.")
+DG_MESSAGE(HelpInspect, "Inspect regions at your position.", "Inspecciona las regiones en tu posición.")
+DG_MESSAGE(Redefined, "Region '{0}' bounds replaced from your selection.",
+           "Los límites de la región '{0}' se reemplazaron con tu selección.")
+DG_MESSAGE(Moved, "Region '{0}' moved by ({1}, {2}, {3}) blocks.",
+           "La región '{0}' se movió ({1}, {2}, {3}) bloques.")
+DG_MESSAGE(ParentSet, "Region '{0}' now inherits from '{1}'.", "La región '{0}' ahora hereda de '{1}'.")
+DG_MESSAGE(ParentCleared, "Region '{0}' no longer has a parent.", "La región '{0}' ya no tiene padre.")
+DG_MESSAGE(PassthroughSet, "Region '{0}' passthrough set to {1}.", "Passthrough de la región '{0}' establecido en {1}.")
+DG_MESSAGE(RegionSelected, "Region '{0}' loaded into your selection.", "La región '{0}' se cargó en tu selección.")
+DG_MESSAGE(OverlapWarning, "Region overlaps {0} existing cuboid region(s): {1}.",
+           "La región se superpone con {0} región(es) cuboide(s): {1}.")
+DG_MESSAGE(DeletedCascade, "Region '{0}' and its child regions were deleted.",
+           "La región '{0}' y sus regiones hijas fueron eliminadas.")
+DG_MESSAGE(Inspect, "Regions at ({0}, {1}, {2}) in {3}: {4}.",
+           "Regiones en ({0}, {1}, {2}) de {3}: {4}.")
+DG_MESSAGE(InspectItem, "{0} [{1}, priority {2}] owner {3}.", "{0} [{1}, prioridad {2}] propietario {3}.")
 DG_MESSAGE(HelpCreate, "Protect your selection.", "Protege tu selección.")
+DG_MESSAGE(HelpClaim, "Claim your selection.", "Reclama tu selección.")
 DG_MESSAGE(HelpDelete, "Remove a region.", "Elimina una región.")
 DG_MESSAGE(HelpRename, "Change its name.", "Cambia su nombre.")
+DG_MESSAGE(HelpRedefine, "Replace its bounds with your selection.", "Reemplaza sus límites con tu selección.")
+DG_MESSAGE(HelpMove, "Move a region by block offsets.", "Mueve una región por desplazamientos de bloques.")
 DG_MESSAGE(HelpList, "Browse this dimension.", "Consulta esta dimensión.")
 DG_MESSAGE(HelpInfo, "View bounds and rules.", "Consulta límites y reglas.")
+DG_MESSAGE(HelpRegionFlags, "View this region's stored flags.", "Consulta las flags guardadas de esta región.")
 DG_MESSAGE(HelpPriority, "Resolve overlapping regions.", "Resuelve regiones superpuestas.")
+DG_MESSAGE(HelpSetParent, "Set or clear a region parent.", "Establece o borra el padre de una región.")
+DG_MESSAGE(HelpSetPassthrough, "Set membership passthrough.", "Establece el passthrough de membresía.")
+DG_MESSAGE(HelpSetFlag, "Set a typed region flag.", "Establece una flag tipada de región.")
+DG_MESSAGE(HelpUnsetFlag, "Clear a region flag override.", "Borra el valor guardado de una flag.")
+DG_MESSAGE(HelpSelectRegion, "Load a region into your selection.", "Carga una región en tu selección.")
 DG_MESSAGE(HelpFlag, "View or change flags.", "Consulta o cambia flags.")
 DG_MESSAGE(HelpFlags, "Browse available flags by page.", "Consulta las flags por página.")
 DG_MESSAGE(HelpTrust, "Trust an online player.", "Autoriza a un jugador conectado.")
@@ -46,14 +71,27 @@ DG_MESSAGE(Exists, "That region name already exists in this dimension.",
            "Ese nombre de región ya existe en esta dimensión.")
 DG_MESSAGE(InvalidName, "Use 1-64 lowercase letters, digits, underscores or hyphens. '__global__' is reserved.",
            "Usa de 1 a 64 letras minúsculas, números, guiones o guiones bajos. '__global__' está reservado.")
+DG_MESSAGE(InvalidBounds, "The region bounds are outside the supported block coordinate range.",
+           "Los límites de la región están fuera del rango de coordenadas de bloques.")
+DG_MESSAGE(ConsoleDimensionRequired, "Console commands require <level> <dimension> before region arguments.",
+           "Los comandos desde consola requieren <nivel> <dimension> antes de los argumentos de región.")
+DG_MESSAGE(DimensionNotFound, "That level or dimension is not loaded on this server.",
+           "Ese mundo o dimensión no está cargado en este servidor.")
+DG_MESSAGE(DeleteConfirmation, "This region has children. Repeat with 'confirm' to delete the complete child tree.",
+           "Esta región tiene hijas. Repite con 'confirm' para eliminar todo el árbol hijo.")
 DG_MESSAGE(InvalidNumber, "The priority must be a valid 32-bit integer.",
            "La prioridad debe ser un entero válido de 32 bits.")
+DG_MESSAGE(InvalidOffset, "Move offsets must be valid 32-bit integers.",
+           "Los desplazamientos deben ser enteros válidos de 32 bits.")
 DG_MESSAGE(List, "Regions in {0}: {1} (page {2}/{3}).", "Regiones en {0}: {1} (página {2}/{3}).")
 DG_MESSAGE(ListItem, "{0}  [priority {1}]", "{0}  [prioridad {1}]")
 DG_MESSAGE(
     Info, "{0} | {1} | priority {2}\nBounds: ({3}, {4}, {5}) to ({6}, {7}, {8})\nOwner UUID: {9} | members: {10}",
     "{0} | {1} | prioridad {2}\nLímites: ({3}, {4}, {5}) a ({6}, {7}, {8})\nUUID del propietario: {9} | miembros: {10}")
 DG_MESSAGE(FlagInfo, "{0}: {1}", "{0}: {1}")
+DG_MESSAGE(RegionInfoKind, "Kind: {0}.", "Tipo: {0}.")
+DG_MESSAGE(RegionInfoParent, "Parent: {0}.", "Padre: {0}.")
+DG_MESSAGE(RegionInfoPassthrough, "Passthrough: {0}.", "Passthrough: {0}.")
 DG_MESSAGE(FlagTypeInfo, "Value type: {0}.", "Tipo de valor: {0}.")
 DG_MESSAGE(FlagValueHints, "Value shortcuts: {0}.", "Opciones rápidas: {0}.")
 DG_MESSAGE(FlagValueUnset, "(unset)", "(sin valor)")

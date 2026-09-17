@@ -1,5 +1,20 @@
 # Release notes
 
+## Unreleased: WG-3 region administration commands
+
+- Expand region administration with `create`/`define`, `claim`, `delete`/`remove`, `rename`,
+  `redefine`, `move`, `list`, `info`, `flags`, priority, parent, passthrough, typed flag and
+  selection commands.
+- Add `/dg inspect`, stored-cuboid selection loading, inclusive overlap diagnostics, paginated
+  listings and explicit confirmation before cascading child-region deletion.
+- Support current-dimension player commands and validated console `<level> <dimension>` targets.
+  Numeric region names and balanced quoted values use the shared bounded parser.
+- Generate native usage metadata, `/dg help` rows and protocol-2169 autocomplete from one catalog,
+  including the `define`, `remove` and `set-priority` aliases.
+
+Read [the WG-3 command administration contract](wg3-commands.md). This work is not deployed or
+released; client/gameplay acceptance and WG-4 least-privilege permissions remain pending.
+
 ## Unreleased: WG-2 unified flag semantics
 
 - Unify typed parsing, values, inheritance, groups, defaults, persistence and command

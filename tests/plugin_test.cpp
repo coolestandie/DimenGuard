@@ -50,7 +50,7 @@ TEST_F(PluginContractTest, CommandMetadataPreservesAliasAndPublicEntryPermission
     auto expected_usages = nativeUsages();
     std::ranges::sort(actual_usages);
     std::ranges::sort(expected_usages);
-    ASSERT_EQ(actual_usages.size(), 10);
+    ASSERT_EQ(actual_usages.size(), 11);
     EXPECT_EQ(actual_usages, expected_usages);
     for (const auto &usage : actual_usages) {
         EXPECT_EQ(usage.find("argument1"), std::string::npos);

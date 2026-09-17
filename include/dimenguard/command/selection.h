@@ -38,6 +38,14 @@ public:
         return Bounds::between(*selection.first, *selection.second);
     }
 
+    void setBounds(const std::string &player_id, const DimensionKey &dimension, const Bounds &bounds)
+    {
+        auto &selection = selections_[player_id];
+        selection.dimension = dimension;
+        selection.first = bounds.min;
+        selection.second = bounds.max;
+    }
+
     void forget(const std::string &player_id) { selections_.erase(player_id); }
 
 private:

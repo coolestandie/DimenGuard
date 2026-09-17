@@ -4,6 +4,7 @@
 #include <limits>
 #include <string_view>
 #include <type_traits>
+#include <unordered_set>
 #include <utility>
 
 namespace dimenguard {
@@ -112,16 +113,41 @@ void RegionService::createTemplate(DimensionKey dimension, std::string name, std
     create(std::move(region));
 }
 
-void RegionService::erase(const RegionKey &key)
+bool RegionService::hasChildren(const RegionKey &key) const noexcept
+{
+    return std::ranges::any_of(regions_.getAll(), [&](const Region &region) {
+        return region.key.dimension == key.dimension && region.parent && *region.parent == key.name;
+    });
+}
+
+void RegionService::erase(const RegionKey &key, bool cascade_children)
 {
     auto candidate = regions_.getAll();
-    const auto found = findRegion(candidate, key);
-    if (std::ranges::any_of(candidate, [&](const Region &region) {
-            return region.key.dimension == key.dimension && region.parent == key.name;
-        })) {
+    static_cast<void>(findRegion(candidate, key));
+    if (hasChildren(key) && !cascade_children) {
         throw ServiceError(ServiceErrorCode::HasChildren, "Detach this region's children before deleting it.");
     }
-    candidate.erase(found);
+    if (cascade_children) {
+        std::unordered_set<std::string> removed{key.name};
+        bool changed = true;
+        while (changed) {
+            changed = false;
+            for (const auto &region : candidate) {
+                if (region.key.dimension != key.dimension || !region.parent || !removed.contains(*region.parent) ||
+                    !removed.insert(region.key.name).second) {
+                    continue;
+                }
+                changed = true;
+            }
+        }
+        std::erase_if(candidate, [&](const Region &region) {
+            return region.key.dimension == key.dimension && removed.contains(region.key.name);
+        });
+    }
+    else {
+        const auto found = std::ranges::find(candidate, key, &Region::key);
+        candidate.erase(found);
+    }
     replaceSnapshot(std::move(candidate));
     ++region_names_revision_;
 }

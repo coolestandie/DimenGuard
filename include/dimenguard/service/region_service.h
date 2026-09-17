@@ -19,6 +19,7 @@ enum class ServiceErrorCode {
     NotFound,
     Exists,
     InvalidName,
+    InvalidBounds,
     LimitReached,
     HasChildren,
     InvalidHierarchy,
@@ -50,8 +51,10 @@ public:
     void create(Region region);
     void createGlobal(DimensionKey dimension, std::string owner);
     void createTemplate(DimensionKey dimension, std::string name, std::string owner);
-    void erase(const RegionKey &key);
+    void erase(const RegionKey &key, bool cascade_children = false);
     void rename(const RegionKey &key, std::string name);
+    void setBounds(const RegionKey &key, Bounds bounds);
+    void move(const RegionKey &key, BlockPosition offset);
     void setPriority(const RegionKey &key, int priority);
     void setParent(const RegionKey &key, std::optional<RegionKey> parent);
     void setPassthrough(const RegionKey &key, FlagState state);
@@ -59,6 +62,7 @@ public:
     void setFlagValue(const RegionKey &key, Flag flag, std::optional<FlagValue> value);
     void setFlagGroup(const RegionKey &key, Flag flag, std::optional<RegionGroup> group);
     void setMember(const RegionKey &key, std::string player_id, bool trusted);
+    [[nodiscard]] bool hasChildren(const RegionKey &key) const noexcept;
 
 private:
     void replaceSnapshot(std::vector<Region> regions);

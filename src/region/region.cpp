@@ -60,6 +60,12 @@ bool Bounds::contains(const BlockPosition &position) const
            position.z >= min.z && position.z <= max.z;
 }
 
+bool Bounds::overlaps(const Bounds &other) const
+{
+    return min.x <= other.max.x && max.x >= other.min.x && min.y <= other.max.y && max.y >= other.min.y &&
+           min.z <= other.max.z && max.z >= other.min.z;
+}
+
 bool Region::isMember(std::string_view player_id) const
 {
     return player_id == owner || members.contains(std::string(player_id));

@@ -64,6 +64,7 @@ add_library(dimenguard_services STATIC
         src/storage/schema.cpp
         src/storage/snapshot.cpp
         src/service/region_service.cpp
+        src/service/region_geometry_service.cpp
         src/service/region_hierarchy_service.cpp
         src/service/region_policy_service.cpp
         src/command/catalog.cpp
@@ -138,6 +139,7 @@ if (BUILD_TESTING)
             tests/sqlite_test.cpp tests/protocol_test.cpp tests/world_policy_test.cpp tests/flag_fallback_test.cpp
             tests/rules_test.cpp tests/wg1_region_test.cpp tests/wg1_storage_test.cpp
             tests/wg2_flag_test.cpp tests/wg2_storage_test.cpp tests/wg2_explosion_test.cpp tests/wg2_integration_test.cpp)
+    target_sources(dimenguard_tests PRIVATE tests/wg3_region_test.cpp)
     target_link_libraries(dimenguard_tests PRIVATE dimenguard_services GTest::gtest_main)
     dimenguard_warnings(dimenguard_tests)
     include(GoogleTest)

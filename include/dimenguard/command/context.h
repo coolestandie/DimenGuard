@@ -5,6 +5,9 @@
 
 #include <exception>
 #include <string_view>
+namespace endstone {
+class Server;
+}
 namespace dimenguard {
 class DimenGuardPlugin;
 class CommandError : public std::exception {
@@ -22,6 +25,7 @@ public:
     [[nodiscard]] Messenger &messages() const;
     [[nodiscard]] RegionService &service() const;
     [[nodiscard]] SelectionManager &selections() const;
+    [[nodiscard]] endstone::Server &server() const;
     [[nodiscard]] endstone::Player &player(endstone::CommandSender &sender) const;
     [[nodiscard]] const Region &region(const endstone::Player &player, const std::string &name) const;
     [[nodiscard]] endstone::NotNull<endstone::Player> resolvePlayer(std::string_view name) const;
