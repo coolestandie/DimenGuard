@@ -1,6 +1,7 @@
 #include "dimenguard/command/context.h"
 #include "dimenguard/command/handlers.h"
 #include "dimenguard/command/parse.h"
+#include "dimenguard/command/permissions.h"
 #include "dimenguard/presentation/flag_panel.h"
 namespace dimenguard {
 void executeGeneralCommand(CommandContext &context, endstone::CommandSender &sender, std::span<const std::string> args)
@@ -28,6 +29,7 @@ void executeGeneralCommand(CommandContext &context, endstone::CommandSender &sen
     }
     else {
         requireArgument(args.size() == 1 && args[0] == "reload");
+        requireArgument(hasCommandPermission(sender, CommandPermission::Recovery), Message::NoPermission);
         context.reload();
         messages.send(sender, Message::Reloaded, context.service().getRegions().getAll().size());
     }

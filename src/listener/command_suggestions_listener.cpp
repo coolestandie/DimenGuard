@@ -1,6 +1,7 @@
 #include "dimenguard/listener/command_suggestions_listener.h"
 
 #include "dimenguard/adapter/context.h"
+#include "dimenguard/command/permissions.h"
 #include "dimenguard/plugin.h"
 #include "dimenguard/protocol/command_suggestions.h"
 
@@ -67,7 +68,8 @@ void CommandSuggestionsListener::refresh() noexcept
 {
     try {
         for (const auto &player : plugin_.getServer().getOnlinePlayers()) {
-            if (player->hasPermission("dimenguard.command")) {
+            if (hasAnyCommandPermission(*player, CommandPermission::List) ||
+                hasAnyCommandPermission(*player, CommandPermission::Info)) {
                 player->updateCommands();
             }
         }
@@ -89,14 +91,20 @@ void CommandSuggestionsListener::onPacketSend(endstone::PacketSendEvent &event) 
             return;
         }
         const auto *service = plugin_.getService();
-        if (!service || !player->hasPermission("dimenguard.command")) {
+        if (!service) {
             return;
         }
         const auto regions = service->getRegions().inDimension(dimensionKey(*player->getDimension()));
         std::vector<std::string> names;
         names.reserve(regions.size());
         for (const auto *region : regions) {
-            names.push_back(region->key.name);
+            if (canSeeRegion(*player, *region)) {
+                names.push_back(region->key.name);
+            }
+        }
+        if (names.empty() && !hasAnyCommandPermission(*player, CommandPermission::List) &&
+            !hasAnyCommandPermission(*player, CommandPermission::Info)) {
+            return;
         }
         if (const auto payload = rewriteCommandSuggestions(event.getPayload(), names)) {
             event.setPayload(*payload);

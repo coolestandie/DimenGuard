@@ -24,6 +24,7 @@ An in-game command always targets the level and dimension of the executing playe
 /dg region priority <region> <priority>
 /dg region set-parent <region> <parent|none>
 /dg region set-passthrough <region> <allow|deny|inherit>
+/dg region set-owner <region> <player>
 /dg region set-flag <region> <flag> <value>
 /dg region unset-flag <region> <flag>
 /dg region select <region>
@@ -103,11 +104,15 @@ server during runtime acceptance.
 
 ## Permissions and limits
 
-WG-3 retains the existing permission boundary: `dimenguard.command` is required for region,
-selection, flag mutation and membership commands. `dimenguard.use` remains sufficient for
-help, language selection and flag discovery. Least-privilege administration nodes, per-region
-ownership checks and player claiming are planned for WG-4; `claim` is therefore currently an
-administrative synonym for `create`.
+WG-4 introduces least-privilege operation nodes, owner/member scopes and separate ownership and
+claim rules. See [the WG-4 permission contract](wg4-permissions.md). The legacy
+`dimenguard.command` node remains an operator-default aggregate for migration, while
+`dimenguard.bypass` remains independent and explicit.
+
+`claim` now requires `dimenguard.region.claim`, assigns the executing player's UUID, rejects physical
+overlap and applies the player claim volume/count limits. `create` remains an administrator-scoped
+operation. Ownership can be transferred with `region set-owner` when the sender has the ownership
+operation globally or for that region.
 
 The service enforces the 10,000-region snapshot limit and persists every successful mutation
 transactionally. Failed validation or storage writes leave the previous live snapshot intact.

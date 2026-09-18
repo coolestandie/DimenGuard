@@ -3,6 +3,7 @@
 #include "dimenguard/command/flag_input.h"
 #include "dimenguard/command/handlers.h"
 #include "dimenguard/command/parse.h"
+#include "dimenguard/command/permissions.h"
 #include "dimenguard/presentation/flag_panel.h"
 #include "dimenguard/presentation/panel.h"
 
@@ -48,6 +49,22 @@ void requirePlayer(const RegionTarget &target)
     requireArgument(target.player != nullptr, Message::PlayerOnly);
 }
 
+const Region &findRegion(CommandContext &context, const RegionTarget &target, std::string_view name);
+
+void requireCommandPermission(const endstone::CommandSender &sender, CommandPermission permission)
+{
+    requireArgument(hasCommandPermission(sender, permission) || hasEmergencyRecovery(sender), Message::NoPermission);
+}
+
+const Region &requireRegionPermission(CommandContext &context, endstone::CommandSender &sender,
+                                      const RegionTarget &target, std::string_view name, CommandPermission permission)
+{
+    const auto &region = findRegion(context, target, name);
+    requireArgument(hasRegionPermission(sender, permission, region) || hasEmergencyRecovery(sender),
+                    Message::NoPermission);
+    return region;
+}
+
 void sendOverlapWarning(CommandContext &context, endstone::CommandSender &sender,
                         const std::vector<const Region *> &overlaps)
 {
@@ -73,7 +90,20 @@ void listRegions(CommandContext &context, endstone::CommandSender &sender, const
     requireArgument(target.arguments.size() <= 1);
     const auto page = target.arguments.empty() ? std::optional<int>{1} : parseInteger(target.arguments[0]);
     requireArgument(page.has_value() && *page >= 1, Message::InvalidPage);
-    const auto regions = context.service().getRegions().inDimension(target.dimension);
+    std::vector<const Region *> regions;
+    const auto available = context.service().getRegions().inDimension(target.dimension);
+    if (hasCommandPermission(sender, CommandPermission::List) || hasEmergencyRecovery(sender)) {
+        regions = available;
+    }
+    else {
+        requirePlayer(target);
+        for (const auto *region : available) {
+            if (hasRegionPermission(sender, CommandPermission::List, *region)) {
+                regions.push_back(region);
+            }
+        }
+        requireArgument(!regions.empty(), Message::NoPermission);
+    }
     constexpr std::size_t page_size = 10;
     const auto slice = paginate(regions.size(), static_cast<std::size_t>(*page), page_size);
     requireArgument(slice.has_value(), Message::InvalidPage);
@@ -107,13 +137,20 @@ void showRegion(CommandContext &context, endstone::CommandSender &sender, const 
 }
 
 void createRegion(CommandContext &context, endstone::CommandSender &sender, const RegionTarget &target,
-                  std::string_view name)
+                  std::string_view name, bool claim)
 {
     requirePlayer(target);
     const auto bounds = context.selections().get(target.player->getUniqueId().str(), target.dimension);
     requireArgument(bounds.has_value(), Message::SelectionRequired);
-    const auto overlaps = context.service().getRegions().overlaps(target.dimension, *bounds);
     const auto id = target.player->getUniqueId().str();
+    if (claim) {
+        requireArgument(hasCommandPermission(sender, CommandPermission::Claim), Message::NoPermission);
+        context.service().claim(target.dimension, std::string(name), *bounds, id);
+        context.messages().send(sender, Message::Created, name);
+        return;
+    }
+    requireCommandPermission(sender, CommandPermission::Create);
+    const auto overlaps = context.service().getRegions().overlaps(target.dimension, *bounds);
     context.service().create({regionKey(target, name), *bounds, 0, id, {}, {}});
     context.messages().send(sender, Message::Created, name);
     sendOverlapWarning(context, sender, overlaps);
@@ -123,8 +160,11 @@ void deleteRegion(CommandContext &context, endstone::CommandSender &sender, cons
 {
     requireArgument(!target.arguments.empty());
     const auto key = regionKey(target, target.arguments.front());
+    static_cast<void>(requireRegionPermission(context, sender, target, key.name, CommandPermission::Delete));
     const auto children = context.service().hasChildren(key);
     if (children) {
+        requireArgument(hasCommandPermission(sender, CommandPermission::Delete) || hasEmergencyRecovery(sender),
+                        Message::NoPermission);
         requireArgument(target.arguments.size() == 2 && target.arguments[1] == "confirm", Message::DeleteConfirmation);
         context.service().erase(key, true);
         context.messages().send(sender, Message::DeletedCascade, key.name);
@@ -139,6 +179,7 @@ void renameRegion(CommandContext &context, endstone::CommandSender &sender, cons
 {
     requireArgument(target.arguments.size() == 2);
     const auto key = regionKey(target, target.arguments[0]);
+    static_cast<void>(requireRegionPermission(context, sender, target, key.name, CommandPermission::Rename));
     context.service().rename(key, target.arguments[1]);
     context.messages().send(sender, Message::Renamed, key.name, target.arguments[1]);
 }
@@ -148,10 +189,13 @@ void redefineRegion(CommandContext &context, endstone::CommandSender &sender, co
     requirePlayer(target);
     requireArgument(target.arguments.size() == 1);
     const auto key = regionKey(target, target.arguments[0]);
+    const auto &region = requireRegionPermission(context, sender, target, key.name, CommandPermission::Redefine);
     const auto bounds = context.selections().get(target.player->getUniqueId().str(), target.dimension);
     requireArgument(bounds.has_value(), Message::SelectionRequired);
     const auto overlaps = context.service().getRegions().overlaps(target.dimension, *bounds, key.name);
-    context.service().setBounds(key, *bounds);
+    const bool owner_scope = !hasCommandPermission(sender, CommandPermission::Redefine) &&
+                             !hasEmergencyRecovery(sender) && region.owner == target.player->getUniqueId().str();
+    context.service().setBounds(key, *bounds, owner_scope);
     context.messages().send(sender, Message::Redefined, key.name);
     sendOverlapWarning(context, sender, overlaps);
 }
@@ -164,7 +208,7 @@ void moveRegion(CommandContext &context, endstone::CommandSender &sender, const 
     const auto z = parseInteger(target.arguments[3]);
     requireArgument(x && y && z, Message::InvalidOffset);
     const auto key = regionKey(target, target.arguments[0]);
-    requireArgument(context.service().getRegions().find(key) != nullptr, Message::NotFound);
+    static_cast<void>(requireRegionPermission(context, sender, target, key.name, CommandPermission::Move));
     context.service().move(key, {*x, *y, *z});
     const auto *after = context.service().getRegions().find(key);
     requireArgument(after != nullptr, Message::NotFound);
@@ -177,6 +221,7 @@ void setParent(CommandContext &context, endstone::CommandSender &sender, const R
 {
     requireArgument(target.arguments.size() == 2);
     const auto key = regionKey(target, target.arguments[0]);
+    static_cast<void>(requireRegionPermission(context, sender, target, key.name, CommandPermission::Parent));
     const std::string_view parent = target.arguments[1];
     if (parent == "none" || parent == "-") {
         context.service().setParent(key, std::nullopt);
@@ -193,6 +238,7 @@ void setPassthrough(CommandContext &context, endstone::CommandSender &sender, co
     const auto state = parseState(target.arguments[1]);
     requireArgument(state.has_value(), Message::InvalidFlagValue);
     const auto key = regionKey(target, target.arguments[0]);
+    static_cast<void>(requireRegionPermission(context, sender, target, key.name, CommandPermission::Passthrough));
     context.service().setPassthrough(key, *state);
     context.messages().send(sender, Message::PassthroughSet, key.name, stateName(*state));
 }
@@ -205,6 +251,14 @@ void setFlag(CommandContext &context, endstone::CommandSender &sender, const Reg
     const auto change = parseFlagChange(*flag, target.arguments[2]);
     requireArgument(change.has_value(), Message::InvalidFlagValue);
     const auto key = regionKey(target, target.arguments[0]);
+    const auto &region = requireRegionPermission(context, sender, target, key.name, CommandPermission::Flags);
+    const auto value_permission = change->value && change->value->state()
+                                    ? std::string_view{stateName(*change->value->state())}
+                                : change->value                    ? std::string_view{"set"}
+                                : target.arguments[2] == "inherit" ? std::string_view{"inherit"}
+                                                                   : std::string_view{"unset"};
+    requireArgument(hasRegionFlagPermission(sender, region, *flag, value_permission) || hasEmergencyRecovery(sender),
+                    Message::NoPermission);
     context.service().setFlagValue(key, *flag, change->value);
     if (!change->value) {
         context.messages().send(sender, Message::FlagCleared, key.name, target.arguments[1]);
@@ -221,6 +275,9 @@ void unsetFlag(CommandContext &context, endstone::CommandSender &sender, const R
     const auto flag = parseFlag(target.arguments[1]);
     requireArgument(flag.has_value(), Message::InvalidFlag);
     const auto key = regionKey(target, target.arguments[0]);
+    const auto &region = requireRegionPermission(context, sender, target, key.name, CommandPermission::Flags);
+    requireArgument(hasRegionFlagPermission(sender, region, *flag, "unset") || hasEmergencyRecovery(sender),
+                    Message::NoPermission);
     context.service().setFlagValue(key, *flag, std::nullopt);
     context.messages().send(sender, Message::FlagCleared, key.name, target.arguments[1]);
 }
@@ -229,10 +286,21 @@ void selectRegion(CommandContext &context, endstone::CommandSender &sender, cons
 {
     requirePlayer(target);
     requireArgument(target.arguments.size() == 1);
-    const auto &region = findRegion(context, target, target.arguments[0]);
+    const auto &region =
+        requireRegionPermission(context, sender, target, target.arguments[0], CommandPermission::Selection);
     requireArgument(region.kind == RegionKind::Cuboid, Message::InvalidRegionType);
     context.selections().setBounds(target.player->getUniqueId().str(), target.dimension, region.bounds);
     context.messages().send(sender, Message::RegionSelected, region.key.name);
+}
+
+void setOwner(CommandContext &context, endstone::CommandSender &sender, const RegionTarget &target)
+{
+    requireArgument(target.arguments.size() == 2);
+    const auto key = regionKey(target, target.arguments[0]);
+    static_cast<void>(requireRegionPermission(context, sender, target, key.name, CommandPermission::Ownership));
+    const auto new_owner = context.resolvePlayer(target.arguments[1]);
+    context.service().setOwner(key, new_owner->getUniqueId().str());
+    context.messages().send(sender, Message::OwnerSet, key.name, new_owner->getName());
 }
 
 std::string_view canonicalAction(std::string_view action)
@@ -261,7 +329,7 @@ void executeRegionCommand(CommandContext &context, endstone::CommandSender &send
     }
     else if (action == "create" || action == "claim") {
         requireArgument(target.arguments.size() == 1);
-        createRegion(context, sender, target, target.arguments.front());
+        createRegion(context, sender, target, target.arguments.front(), action == "claim");
     }
     else if (action == "delete") {
         deleteRegion(context, sender, target);
@@ -277,11 +345,14 @@ void executeRegionCommand(CommandContext &context, endstone::CommandSender &send
     }
     else if (action == "info") {
         requireArgument(target.arguments.size() == 1);
+        static_cast<void>(
+            requireRegionPermission(context, sender, target, target.arguments.front(), CommandPermission::Info));
         showRegion(context, sender, target, target.arguments.front());
     }
     else if (action == "flags") {
         requireArgument(target.arguments.size() == 1);
-        const auto &region = findRegion(context, target, target.arguments.front());
+        const auto &region =
+            requireRegionPermission(context, sender, target, target.arguments.front(), CommandPermission::Flags);
         context.messages().sendLines(sender, renderRegionFlags(region, context.messages().getLocale(sender)));
     }
     else if (action == "priority") {
@@ -289,6 +360,7 @@ void executeRegionCommand(CommandContext &context, endstone::CommandSender &send
         const auto priority = parseInteger(target.arguments[1]);
         requireArgument(priority.has_value(), Message::InvalidNumber);
         const auto key = regionKey(target, target.arguments[0]);
+        static_cast<void>(requireRegionPermission(context, sender, target, key.name, CommandPermission::Priority));
         context.service().setPriority(key, *priority);
         context.messages().send(sender, Message::PrioritySet, key.name, *priority);
     }
@@ -297,6 +369,9 @@ void executeRegionCommand(CommandContext &context, endstone::CommandSender &send
     }
     else if (action == "set-passthrough") {
         setPassthrough(context, sender, target);
+    }
+    else if (action == "set-owner") {
+        setOwner(context, sender, target);
     }
     else if (action == "set-flag") {
         setFlag(context, sender, target);

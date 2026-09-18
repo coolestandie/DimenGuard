@@ -52,7 +52,8 @@ but does not prove Bedrock command routing, client rendering or loaded-dimension
   Existing names are dimension-filtered, new names remain free text and suggestions refresh after
   create, rename, delete, reload and dimension changes.
 - [ ] Verify `/dg help` uses the same action list and hides administrative rows for a sender without
-  `dimenguard.command`. Confirm `claim` is still admin-gated until WG-4 permissions are implemented.
+  `dimenguard.command`. Confirm `claim` requires `dimenguard.region.claim` and is no longer an
+  implicit alias for administrator create.
 
 ## Offline checks
 
@@ -137,8 +138,17 @@ authoritative world change. Mark unsupported cases as limitations, not passing p
   unpaged; it must not modify data.
 - [ ] Inspect `/dg help` in English and Spanish: framed heading, categorized command rows and
   no administrative rows for a player without `dimenguard.command`. Verify `DimenGuard >` colors.
-- [ ] Verify an owner without `dimenguard.command` cannot administer regions merely by owning one.
-  Verify a non-operator without the command permission cannot create, delete or change flags.
+- [ ] Verify operation permissions independently: selection, create, claim, delete, list, info,
+  flags, priority, parent, membership, ownership and recovery. An owner without the matching
+  `.own` scope cannot administer a region merely by owning it; a member needs the matching `.member`
+  scope. Verify a non-operator without an operation node cannot create, delete or change flags.
+- [ ] Grant `dimenguard.region.flags.own`, `dimenguard.region.flag.pvp` and
+  `dimenguard.region.flag.pvp.deny` to an owner. Confirm that `pvp allow` and unrelated flags remain
+  unavailable until their value-specific nodes are granted. Confirm `dimenguard.region.flag.*` is an
+  explicit all-flag grant, not an implicit wildcard.
+- [ ] Grant `dimenguard.region.claim` to a non-operator. Claim a non-overlapping selection, reject a
+  physical overlap, reject a claim larger than 1,048,576 blocks and reject the 65th claim for one UUID.
+  Confirm the owner UUID persists after reload and `/dg region set-owner` preserves members.
 - [ ] Verify a player with the default `dimenguard.use` can read help, browse `/dg flags` and
   choose their language without receiving administration rights. Check reload from the console
   and rejection of player-only commands.

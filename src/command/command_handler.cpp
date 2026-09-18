@@ -18,6 +18,12 @@ Message serviceMessage(ServiceErrorCode code)
         return Message::InvalidBounds;
     case ServiceErrorCode::LimitReached:
         return Message::LimitReached;
+    case ServiceErrorCode::VolumeLimit:
+        return Message::VolumeLimit;
+    case ServiceErrorCode::ClaimLimit:
+        return Message::ClaimLimit;
+    case ServiceErrorCode::ClaimOverlap:
+        return Message::ClaimOverlap;
     case ServiceErrorCode::HasChildren:
         return Message::RegionHasChildren;
     case ServiceErrorCode::InvalidHierarchy:
@@ -57,7 +63,6 @@ void CommandHandler::dispatch(endstone::CommandSender &sender, std::span<const s
         executeGeneralCommand(context_, sender, args);
         return;
     }
-    requireArgument(sender.hasPermission("dimenguard.command"), Message::NoPermission);
     if (args[0] == "reload") {
         executeGeneralCommand(context_, sender, args);
     }

@@ -56,6 +56,7 @@ TEST(CommandCatalog, ContainsEveryCommandPathExactlyOnce)
         "region priority",
         "region set-parent",
         "region set-passthrough",
+        "region set-owner",
         "region set-flag",
         "region unset-flag",
         "region select",
@@ -68,7 +69,7 @@ TEST(CommandCatalog, ContainsEveryCommandPathExactlyOnce)
         "flags",
     };
     const auto catalog = commandCatalog();
-    ASSERT_EQ(catalog.size(), 25);
+    ASSERT_EQ(catalog.size(), 26);
     std::set<std::string_view> actual;
     for (const auto &command : catalog) {
         EXPECT_TRUE(actual.insert(command.path).second) << command.path;

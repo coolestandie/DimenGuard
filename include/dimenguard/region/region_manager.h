@@ -33,6 +33,7 @@ public:
     void replaceAll(std::vector<Region> regions);
 
     [[nodiscard]] const Region *find(const RegionKey &key) const;
+    [[nodiscard]] std::size_t countOwned(std::string_view owner) const noexcept;
     [[nodiscard]] std::vector<const Region *> inDimension(const DimensionKey &dimension) const;
     [[nodiscard]] std::vector<const Region *> overlaps(const DimensionKey &dimension, const Bounds &bounds,
                                                        std::optional<std::string_view> excluded = std::nullopt) const;

@@ -79,6 +79,21 @@ bool isValidRegionName(std::string_view name)
     });
 }
 
+std::uint64_t boundsVolume(const Bounds &bounds)
+{
+    const auto extent = [](int minimum, int maximum) {
+        return static_cast<std::uint64_t>(static_cast<std::int64_t>(maximum) - minimum) + 1;
+    };
+    const auto multiply = [](std::uint64_t first, std::uint64_t second) {
+        if (second != 0 && first > std::numeric_limits<std::uint64_t>::max() / second) {
+            return std::numeric_limits<std::uint64_t>::max();
+        }
+        return first * second;
+    };
+    return multiply(multiply(extent(bounds.min.x, bounds.max.x), extent(bounds.min.y, bounds.max.y)),
+                    extent(bounds.min.z, bounds.max.z));
+}
+
 void validateRegion(const Region &region)
 {
     static_cast<void>(regionKindName(region.kind));

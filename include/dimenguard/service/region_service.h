@@ -21,6 +21,9 @@ enum class ServiceErrorCode {
     InvalidName,
     InvalidBounds,
     LimitReached,
+    VolumeLimit,
+    ClaimLimit,
+    ClaimOverlap,
     HasChildren,
     InvalidHierarchy,
     InvalidRegionType,
@@ -42,6 +45,9 @@ private:
 class RegionService {
 public:
     static constexpr std::size_t MaxRegions = storage::max_regions;
+    static constexpr std::uint64_t MaxCuboidVolume = storage::max_cuboid_volume;
+    static constexpr std::uint64_t MaxClaimVolume = storage::max_claim_volume;
+    static constexpr std::size_t MaxClaimedRegions = storage::max_claimed_regions;
 
     explicit RegionService(const std::filesystem::path &path);
 
@@ -49,11 +55,12 @@ public:
     [[nodiscard]] std::uint64_t getRegionNamesRevision() const noexcept;
     void reload();
     void create(Region region);
+    void claim(DimensionKey dimension, std::string name, Bounds bounds, std::string owner);
     void createGlobal(DimensionKey dimension, std::string owner);
     void createTemplate(DimensionKey dimension, std::string name, std::string owner);
     void erase(const RegionKey &key, bool cascade_children = false);
     void rename(const RegionKey &key, std::string name);
-    void setBounds(const RegionKey &key, Bounds bounds);
+    void setBounds(const RegionKey &key, Bounds bounds, bool enforce_claim_limit = false);
     void move(const RegionKey &key, BlockPosition offset);
     void setPriority(const RegionKey &key, int priority);
     void setParent(const RegionKey &key, std::optional<RegionKey> parent);
@@ -62,6 +69,7 @@ public:
     void setFlagValue(const RegionKey &key, Flag flag, std::optional<FlagValue> value);
     void setFlagGroup(const RegionKey &key, Flag flag, std::optional<RegionGroup> group);
     void setMember(const RegionKey &key, std::string player_id, bool trusted);
+    void setOwner(const RegionKey &key, std::string owner);
     [[nodiscard]] bool hasChildren(const RegionKey &key) const noexcept;
 
 private:

@@ -1,5 +1,6 @@
 #include "dimenguard/presentation/messenger.h"
 
+#include "dimenguard/command/permissions.h"
 #include "dimenguard/presentation/help_panel.h"
 
 namespace dimenguard {
@@ -45,7 +46,14 @@ void Messenger::denyText(endstone::Player &player, std::string_view text)
 
 void Messenger::sendHelp(endstone::CommandSender &sender) const
 {
-    sendLines(sender, renderHelp(getLocale(sender), sender.hasPermission("dimenguard.command")));
+    sendLines(sender, renderHelp(getLocale(sender), [&sender](std::string_view permission) {
+                  for (const auto command_permission : commandPermissions()) {
+                      if (permissionName(command_permission) == permission) {
+                          return hasAnyCommandPermission(sender, command_permission);
+                      }
+                  }
+                  return false;
+              }));
 }
 
 void Messenger::sendLines(endstone::CommandSender &sender, std::span<const std::string> lines) const

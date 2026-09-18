@@ -66,4 +66,12 @@ void RegionService::setMember(const RegionKey &key, std::string player_id, bool 
     });
 }
 
+void RegionService::setOwner(const RegionKey &key, std::string owner)
+{
+    if (owner.empty()) {
+        throw std::invalid_argument("Region owner identities must not be empty.");
+    }
+    mutateRegion(key, [&owner](Region &region) { region.owner = std::move(owner); });
+}
+
 }

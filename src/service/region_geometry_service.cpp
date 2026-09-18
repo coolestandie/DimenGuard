@@ -17,10 +17,14 @@ std::optional<int> addCoordinate(int value, int offset)
 
 }
 
-void RegionService::setBounds(const RegionKey &key, Bounds bounds)
+void RegionService::setBounds(const RegionKey &key, Bounds bounds, bool enforce_claim_limit)
 {
     if (bounds.min.x > bounds.max.x || bounds.min.y > bounds.max.y || bounds.min.z > bounds.max.z) {
         throw ServiceError(ServiceErrorCode::InvalidBounds, "Region bounds must be ordered on every axis.");
+    }
+    const auto volume_limit = enforce_claim_limit ? MaxClaimVolume : MaxCuboidVolume;
+    if (boundsVolume(bounds) > volume_limit) {
+        throw ServiceError(ServiceErrorCode::VolumeLimit, "The cuboid exceeds the supported volume limit.");
     }
     mutateRegion(key, [bounds](Region &region) {
         if (region.kind != RegionKind::Cuboid) {
