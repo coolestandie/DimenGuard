@@ -28,6 +28,11 @@ void Messenger::forget(const endstone::Player &player)
 
 void Messenger::deny(endstone::Player &player, Message message)
 {
+    denyText(player, messageText(message, getLocale(player)));
+}
+
+void Messenger::denyText(endstone::Player &player, std::string_view text)
+{
     const auto now = std::chrono::steady_clock::now();
     const auto id = player.getUniqueId().str();
     const auto found = last_denial_.find(id);
@@ -35,7 +40,7 @@ void Messenger::deny(endstone::Player &player, Message message)
         return;
     }
     last_denial_[id] = now;
-    send(player, message);
+    player.sendMessage(endstone::Message{Theme::decorate(text)});
 }
 
 void Messenger::sendHelp(endstone::CommandSender &sender) const

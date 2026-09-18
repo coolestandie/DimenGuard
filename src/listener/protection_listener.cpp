@@ -5,7 +5,7 @@ namespace dimenguard {
 ProtectionListener::ProtectionListener(DimenGuardPlugin &plugin)
     : context_(plugin), blocks_(context_), player_interactions_(context_), actors_(context_),
       sessions_(plugin, context_), world_blocks_(context_), explosions_(context_), mobs_(context_),
-      movements_(context_), items_(context_), player_activities_(context_)
+      movements_(context_), items_(context_), player_activities_(context_), spawns_(context_)
 {
 }
 
@@ -21,6 +21,7 @@ void ProtectionListener::registerEvents()
     movements_.registerEvents();
     items_.registerEvents();
     player_activities_.registerEvents();
+    spawns_.registerEvents();
 }
 
 }

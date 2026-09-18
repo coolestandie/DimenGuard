@@ -1,5 +1,10 @@
 # WorldGuard-inspired flag roadmap
 
+For the current unreleased branch, [WG-2](flag-semantics.md) supersedes the typed-value,
+source-aware explosion and supported nonplayer-domain backlog below. It registers 33
+functional flags with schema 3; the following 26-flag matrix remains the published preview
+baseline. Unsupported piston and session-effect paths are still not claimed as implemented.
+
 Static audit dated 2026-09-08. The reference is the [WorldGuard flag catalog](https://worldguard.enginehub.org/en/latest/regions/flags/), not a compatibility specification for DimenGuard. The evidence below is the local Endstone API 0.12 checkout `2572cd304b5ca2d094e02a1b2f969f7632ea44f6` and the current DimenGuard source. It does not establish runtime acceptance or support on a different Endstone build.
 
 **The 0.2.0 preview candidate implements the 26 state flags in the first table. Runtime acceptance is still pending.** Later rows marked **Implemented** describe that same bounded scope, not additional features; **Next**, **Partial**, **Typed** and **Blocked** rows remain future work. A header declaration is not a firing hook, and a cancellable after-event is not pre-mutation prevention. See [event coverage](event-coverage.md) and [runtime tests](testing.md). This is a coherent public preview, not a complete WorldGuard replacement.

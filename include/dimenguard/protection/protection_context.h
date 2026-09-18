@@ -3,6 +3,7 @@
 #include "dimenguard/region/region.h"
 
 #include <chrono>
+#include <endstone/level/location.h>
 #include <endstone/plugin/plugin.h>
 #include <exception>
 #include <optional>
@@ -24,6 +25,9 @@ public:
     explicit ProtectionContext(DimenGuardPlugin &plugin);
     [[nodiscard]] bool allowed(endstone::Player &player, const endstone::Location &location, Flag flag);
     [[nodiscard]] bool allowed(const endstone::Location &location, Flag flag);
+    [[nodiscard]] bool allowsNonPlayerBlockChange(std::optional<endstone::Location> source,
+                                                  const endstone::Location &target);
+    [[nodiscard]] bool permitsSpawn(const endstone::Location &location, std::string_view actor_id, bool mob);
     [[nodiscard]] bool permitsDamage(const endstone::Location &location, bool player, std::optional<Flag> damage_flag);
     [[nodiscard]] bool allowedAtBoth(endstone::Player &player, const endstone::Location &first,
                                      const endstone::Location &second, Flag flag);

@@ -14,6 +14,8 @@ Message serviceMessage(ServiceErrorCode code)
         return Message::Exists;
     case ServiceErrorCode::InvalidName:
         return Message::InvalidName;
+    case ServiceErrorCode::InvalidBounds:
+        return Message::InvalidBounds;
     case ServiceErrorCode::LimitReached:
         return Message::LimitReached;
     case ServiceErrorCode::HasChildren:
@@ -59,7 +61,7 @@ void CommandHandler::dispatch(endstone::CommandSender &sender, std::span<const s
     if (args[0] == "reload") {
         executeGeneralCommand(context_, sender, args);
     }
-    else if (args[0] == "pos1" || args[0] == "pos2") {
+    else if (args[0] == "pos1" || args[0] == "pos2" || args[0] == "inspect") {
         executeSelectionCommand(context_, sender, args);
     }
     else if (args[0] == "region") {

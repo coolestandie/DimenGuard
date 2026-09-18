@@ -68,6 +68,23 @@ TEST_F(SqliteTest, NullableTextKeepsNullDistinctFromEmptyAndRejectsOtherTypes)
     EXPECT_THROW(static_cast<void>(invalid.optionalText(0)), std::runtime_error);
 }
 
+TEST_F(SqliteTest, BoundedTextRejectsOversizedValuesWithoutChangingBytesOrTypeRules)
+{
+    sqlite::Connection connection(path_);
+    sqlite::Statement query(connection, "SELECT 'abcd', '', 'a' || char(0) || 'b', 12, NULL");
+    ASSERT_TRUE(query.next());
+    EXPECT_THROW(static_cast<void>(query.text(0, 3)), std::runtime_error);
+    EXPECT_EQ(query.text(0, 4), "abcd");
+    EXPECT_EQ(query.text(0), "abcd");
+    EXPECT_EQ(query.text(1, 0), "");
+    EXPECT_THROW(static_cast<void>(query.text(2, 2)), std::runtime_error);
+    EXPECT_EQ(query.text(2, 3), std::string("a\0b", 3));
+    EXPECT_THROW(static_cast<void>(query.text(3, 10)), std::runtime_error);
+    EXPECT_THROW(static_cast<void>(query.text(4, 10)), std::runtime_error);
+    EXPECT_THROW(static_cast<void>(query.text(-1, 10)), std::out_of_range);
+    EXPECT_THROW(static_cast<void>(query.text(5, 10)), std::out_of_range);
+}
+
 TEST_F(SqliteTest, FailedCommitRollsBackThenConnectionCanBeReused)
 {
     sqlite::Connection connection(path_, 0);

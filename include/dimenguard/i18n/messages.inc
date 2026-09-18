@@ -11,12 +11,37 @@ DG_MESSAGE(HelpProtection, "Protection", "Protección")
 DG_MESSAGE(HelpGeneral, "General", "General")
 DG_MESSAGE(HelpSelectFirst, "Select the first corner.", "Selecciona la primera esquina.")
 DG_MESSAGE(HelpSelectSecond, "Select the second corner.", "Selecciona la segunda esquina.")
+DG_MESSAGE(HelpInspect, "Inspect regions at your position.", "Inspecciona las regiones en tu posición.")
+DG_MESSAGE(Redefined, "Region '{0}' bounds replaced from your selection.",
+           "Los límites de la región '{0}' se reemplazaron con tu selección.")
+DG_MESSAGE(Moved, "Region '{0}' moved by ({1}, {2}, {3}) blocks.",
+           "La región '{0}' se movió ({1}, {2}, {3}) bloques.")
+DG_MESSAGE(ParentSet, "Region '{0}' now inherits from '{1}'.", "La región '{0}' ahora hereda de '{1}'.")
+DG_MESSAGE(ParentCleared, "Region '{0}' no longer has a parent.", "La región '{0}' ya no tiene padre.")
+DG_MESSAGE(PassthroughSet, "Region '{0}' passthrough set to {1}.", "Passthrough de la región '{0}' establecido en {1}.")
+DG_MESSAGE(RegionSelected, "Region '{0}' loaded into your selection.", "La región '{0}' se cargó en tu selección.")
+DG_MESSAGE(OverlapWarning, "Region overlaps {0} existing cuboid region(s): {1}.",
+           "La región se superpone con {0} región(es) cuboide(s): {1}.")
+DG_MESSAGE(DeletedCascade, "Region '{0}' and its child regions were deleted.",
+           "La región '{0}' y sus regiones hijas fueron eliminadas.")
+DG_MESSAGE(Inspect, "Regions at ({0}, {1}, {2}) in {3}: {4}.",
+           "Regiones en ({0}, {1}, {2}) de {3}: {4}.")
+DG_MESSAGE(InspectItem, "{0} [{1}, priority {2}] owner {3}.", "{0} [{1}, prioridad {2}] propietario {3}.")
 DG_MESSAGE(HelpCreate, "Protect your selection.", "Protege tu selección.")
+DG_MESSAGE(HelpClaim, "Claim your selection.", "Reclama tu selección.")
 DG_MESSAGE(HelpDelete, "Remove a region.", "Elimina una región.")
 DG_MESSAGE(HelpRename, "Change its name.", "Cambia su nombre.")
+DG_MESSAGE(HelpRedefine, "Replace its bounds with your selection.", "Reemplaza sus límites con tu selección.")
+DG_MESSAGE(HelpMove, "Move a region by block offsets.", "Mueve una región por desplazamientos de bloques.")
 DG_MESSAGE(HelpList, "Browse this dimension.", "Consulta esta dimensión.")
 DG_MESSAGE(HelpInfo, "View bounds and rules.", "Consulta límites y reglas.")
+DG_MESSAGE(HelpRegionFlags, "View this region's stored flags.", "Consulta las flags guardadas de esta región.")
 DG_MESSAGE(HelpPriority, "Resolve overlapping regions.", "Resuelve regiones superpuestas.")
+DG_MESSAGE(HelpSetParent, "Set or clear a region parent.", "Establece o borra el padre de una región.")
+DG_MESSAGE(HelpSetPassthrough, "Set membership passthrough.", "Establece el passthrough de membresía.")
+DG_MESSAGE(HelpSetFlag, "Set a typed region flag.", "Establece una flag tipada de región.")
+DG_MESSAGE(HelpUnsetFlag, "Clear a region flag override.", "Borra el valor guardado de una flag.")
+DG_MESSAGE(HelpSelectRegion, "Load a region into your selection.", "Carga una región en tu selección.")
 DG_MESSAGE(HelpFlag, "View or change flags.", "Consulta o cambia flags.")
 DG_MESSAGE(HelpFlags, "Browse available flags by page.", "Consulta las flags por página.")
 DG_MESSAGE(HelpTrust, "Trust an online player.", "Autoriza a un jugador conectado.")
@@ -46,22 +71,62 @@ DG_MESSAGE(Exists, "That region name already exists in this dimension.",
            "Ese nombre de región ya existe en esta dimensión.")
 DG_MESSAGE(InvalidName, "Use 1-64 lowercase letters, digits, underscores or hyphens. '__global__' is reserved.",
            "Usa de 1 a 64 letras minúsculas, números, guiones o guiones bajos. '__global__' está reservado.")
+DG_MESSAGE(InvalidBounds, "The region bounds are outside the supported block coordinate range.",
+           "Los límites de la región están fuera del rango de coordenadas de bloques.")
+DG_MESSAGE(ConsoleDimensionRequired, "Console commands require <level> <dimension> before region arguments.",
+           "Los comandos desde consola requieren <nivel> <dimension> antes de los argumentos de región.")
+DG_MESSAGE(DimensionNotFound, "That level or dimension is not loaded on this server.",
+           "Ese mundo o dimensión no está cargado en este servidor.")
+DG_MESSAGE(DeleteConfirmation, "This region has children. Repeat with 'confirm' to delete the complete child tree.",
+           "Esta región tiene hijas. Repite con 'confirm' para eliminar todo el árbol hijo.")
 DG_MESSAGE(InvalidNumber, "The priority must be a valid 32-bit integer.",
            "La prioridad debe ser un entero válido de 32 bits.")
+DG_MESSAGE(InvalidOffset, "Move offsets must be valid 32-bit integers.",
+           "Los desplazamientos deben ser enteros válidos de 32 bits.")
 DG_MESSAGE(List, "Regions in {0}: {1} (page {2}/{3}).", "Regiones en {0}: {1} (página {2}/{3}).")
 DG_MESSAGE(ListItem, "{0}  [priority {1}]", "{0}  [prioridad {1}]")
 DG_MESSAGE(
     Info, "{0} | {1} | priority {2}\nBounds: ({3}, {4}, {5}) to ({6}, {7}, {8})\nOwner UUID: {9} | members: {10}",
     "{0} | {1} | prioridad {2}\nLímites: ({3}, {4}, {5}) a ({6}, {7}, {8})\nUUID del propietario: {9} | miembros: {10}")
 DG_MESSAGE(FlagInfo, "{0}: {1}", "{0}: {1}")
+DG_MESSAGE(RegionInfoKind, "Kind: {0}.", "Tipo: {0}.")
+DG_MESSAGE(RegionInfoParent, "Parent: {0}.", "Padre: {0}.")
+DG_MESSAGE(RegionInfoPassthrough, "Passthrough: {0}.", "Passthrough: {0}.")
+DG_MESSAGE(FlagTypeInfo, "Value type: {0}.", "Tipo de valor: {0}.")
+DG_MESSAGE(FlagValueHints, "Value shortcuts: {0}.", "Opciones rápidas: {0}.")
+DG_MESSAGE(FlagValueUnset, "(unset)", "(sin valor)")
+DG_MESSAGE(FlagGroupInfo, "Stored group: {0}.", "Grupo guardado: {0}.")
+DG_MESSAGE(FlagBaseInfo, "Unset values fall back to {0}.", "Sin valor, hereda {0}.")
+DG_MESSAGE(FlagTypedSyntax, "Text accepts spaces; sets use comma-separated IDs or [] for an empty set.",
+           "El texto admite espacios; los conjuntos usan IDs separados por comas o [] para vaciarlos.")
+DG_MESSAGE(FlagUnsetSyntax, "Clear any stored value: /dg flag <region> <flag> --unset",
+           "Borra cualquier valor guardado: /dg flag <region> <flag> --unset")
+DG_MESSAGE(FlagCleared, "Region '{0}': {1} now inherits its value.",
+           "Región '{0}': {1} ahora hereda su valor.")
+DG_MESSAGE(InvalidFlagValue, "Invalid value. Query /dg flag <region> <flag> to see its type; --unset clears it.",
+           "Valor inválido. Consulta /dg flag <region> <flag> para ver su tipo; --unset lo borra.")
+DG_MESSAGE(FlagTntDescription, "Reported TNT explosions; block damage also checks source-region protection.",
+           "Explosiones de TNT registradas; el daño a bloques también revisa la región de origen.")
+DG_MESSAGE(FlagCreeperExplosionDescription, "Reported creeper explosions; inherits explosions.",
+           "Explosiones de creepers registradas; hereda explosions.")
+DG_MESSAGE(FlagOtherExplosionDescription, "Other identified explosions; inherits explosions.",
+           "Otras explosiones identificadas; hereda explosions.")
+DG_MESSAGE(FlagDenySpawnDescription, "Set of actor IDs denied on spawn, such as minecraft:zombie.",
+           "Conjunto de IDs de entidades que no pueden aparecer, como minecraft:zombie.")
+DG_MESSAGE(FlagEntryDenyMessageDescription, "Text shown when a reported entry is denied.",
+           "Texto mostrado cuando se deniega una entrada registrada.")
+DG_MESSAGE(FlagExitDenyMessageDescription, "Text shown when a reported exit is denied.",
+           "Texto mostrado cuando se deniega una salida registrada.")
+DG_MESSAGE(FlagNonPlayerProtectionDomainsDescription, "Shared domain IDs for supported non-player block changes.",
+           "Dominios compartidos para cambios de bloques no humanos compatibles.")
 DG_MESSAGE(FlagsAvailable, "Available flags", "Flags disponibles")
 DG_MESSAGE(FlagsPage, "{0} (page {1}/{2}, {3} flags)", "{0} (página {1}/{2}, {3} flags)")
 DG_MESSAGE(FlagScopePlayer, "Player actions", "Acciones de jugadores")
 DG_MESSAGE(FlagScopeEnvironment, "World and actor rules", "Reglas del mundo y entidades")
 DG_MESSAGE(FlagScopeTransition, "Movement", "Movimiento")
 DG_MESSAGE(FlagNavigation, "Browse: {0}", "Consulta: {0}")
-DG_MESSAGE(FlagBuildDescription, "Player block breaking, placement and supported bucket actions.",
-           "Rotura y colocación de bloques por jugadores y usos compatibles de cubetas.")
+DG_MESSAGE(FlagBuildDescription, "Player building and the fallback for supported TNT block changes.",
+           "Construcción por jugadores y regla base para cambios de bloques de TNT compatibles.")
 DG_MESSAGE(FlagInteractDescription, "Supported right-click block and actor interactions.",
            "Interacciones compatibles con clic derecho en bloques y con entidades.")
 DG_MESSAGE(FlagContainerDescription, "Opening interactions for recognized block containers.",
@@ -85,8 +150,8 @@ DG_MESSAGE(FlagEntryDescription, "Entering on reported moves/teleports; portal c
            "Entrada por movimientos/teletransportes registrados; portales parciales.")
 DG_MESSAGE(FlagExitDescription, "Leaving on reported moves/teleports; portal coverage is incomplete.",
            "Salida por movimientos/teletransportes registrados; portales parciales.")
-DG_MESSAGE(FlagBlockBreakDescription, "Player block breaking; falls back to build.",
-           "Rotura de bloques por jugadores; hereda build.")
+DG_MESSAGE(FlagBlockBreakDescription, "Player breaking and supported TNT block changes; inherits build.",
+           "Rotura por jugadores y cambios de TNT compatibles; hereda build.")
 DG_MESSAGE(FlagBlockPlaceDescription, "Player block placement; falls back to build.",
            "Colocación de bloques por jugadores; hereda build.")
 DG_MESSAGE(FlagUseDescription, "Supported block use; falls back to interact.",
@@ -111,15 +176,15 @@ DG_MESSAGE(FlagFireworkDamageDescription, "Reported firework damage to mobs and 
            "Daño de fuegos artificiales registrado en mobs y jugadores.")
 DG_MESSAGE(FlagDefaults, "Defaults: build/interact/container-access require membership.",
            "Por defecto: build/interact/container-access exigen membresía.")
-DG_MESSAGE(FlagFallbacks, "Unset granular flags follow build, interact, use or fluid-flow.",
-           "Las flags específicas sin valor heredan build, interact, use o fluid-flow.")
+DG_MESSAGE(FlagFallbacks, "Unset granular flags follow their registered base flag.",
+           "Las flags específicas sin valor heredan su regla base registrada.")
 DG_MESSAGE(FlagSyntax, "Usage: {0}", "Uso: {0}")
 DG_MESSAGE(FlagExample, "Example: /dg flag spawn pvp deny", "Ejemplo: /dg flag spawn pvp deny")
 DG_MESSAGE(RegionFlags, "Region '{0}': stored flags", "Región '{0}': flags guardadas")
 DG_MESSAGE(FlagInvincibleDescription, "allow blocks reported player damage; default deny.",
            "allow bloquea daño recibido por jugadores; por defecto deny.")
-DG_MESSAGE(FlagImmunityDefault, "Other flags default to allow; invincible uses deny (no immunity).",
-           "Las demás usan allow por defecto; invincible usa deny (sin inmunidad).")
+DG_MESSAGE(FlagImmunityDefault, "Other state flags default to allow; invincible uses deny (no immunity).",
+           "Las demás flags de estado usan allow; invincible usa deny (sin inmunidad).")
 DG_MESSAGE(FlagInheritance, "inherit follows overlapping regions and default rules.",
            "inherit consulta las regiones superpuestas y las reglas predeterminadas.")
 DG_MESSAGE(FlagSet, "Region '{0}': {1} = {2}.", "Región '{0}': {1} = {2}.")

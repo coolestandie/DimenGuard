@@ -1,5 +1,7 @@
 #pragma once
 
+#include "dimenguard/rules/explosion_rules.h"
+
 #include <endstone/util/pointers.h>
 #include <vector>
 
@@ -21,7 +23,8 @@ public:
     void registerEvents();
 
 private:
-    bool allowed(const endstone::Location &origin, const std::vector<endstone::NotNull<endstone::Block>> &blocks);
+    bool protect(const endstone::Location &origin, ExplosionSource source,
+                 std::vector<endstone::NotNull<endstone::Block>> &blocks);
     bool onActorExplosion(endstone::ActorExplodeEvent &event);
     bool onBlockExplosion(endstone::BlockExplodeEvent &event);
     bool onDamage(endstone::ActorDamageEvent &event);

@@ -198,7 +198,7 @@ public:
     std::string build()
     {
         BinaryWriter writer(max_payload);
-        const auto catalog = commandCatalog();
+        const auto catalog = clientCommandCatalog();
         writer.writeCount(catalog.size(), 250);
         for (std::size_t i = 0; i < catalog.size(); ++i) {
             const auto &command = catalog[i];

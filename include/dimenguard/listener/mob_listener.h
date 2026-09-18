@@ -3,7 +3,6 @@
 namespace endstone {
 class ActorChangeBlockEvent;
 class ActorDamageEvent;
-class ActorSpawnEvent;
 }
 
 namespace dimenguard {
@@ -17,7 +16,6 @@ public:
 
 private:
     bool onGriefing(endstone::ActorChangeBlockEvent &event);
-    bool onSpawn(endstone::ActorSpawnEvent &event);
     bool onDamage(endstone::ActorDamageEvent &event);
 
     ProtectionContext &context_;

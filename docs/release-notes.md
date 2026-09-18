@@ -1,5 +1,36 @@
 # Release notes
 
+## Unreleased: WG-3 region administration commands
+
+- Expand region administration with `create`/`define`, `claim`, `delete`/`remove`, `rename`,
+  `redefine`, `move`, `list`, `info`, `flags`, priority, parent, passthrough, typed flag and
+  selection commands.
+- Add `/dg inspect`, stored-cuboid selection loading, inclusive overlap diagnostics, paginated
+  listings and explicit confirmation before cascading child-region deletion.
+- Support current-dimension player commands and validated console `<level> <dimension>` targets.
+  Numeric region names and balanced quoted values use the shared bounded parser.
+- Generate native usage metadata, `/dg help` rows and protocol-2169 autocomplete from one catalog,
+  including the `define`, `remove` and `set-priority` aliases.
+
+Read [the WG-3 command administration contract](wg3-commands.md). This work is not deployed or
+released; client/gameplay acceptance and WG-4 least-privilege permissions remain pending.
+
+## Unreleased: WG-2 unified flag semantics
+
+- Unify typed parsing, values, inheritance, groups, defaults, persistence and command
+  presentation. Keep existing player policies; add seven functional flags (33 total).
+- Filter explosion terrain per affected block, distinguish TNT/creeper/other sources,
+  apply TNT regional association/domains and keep victim damage independent.
+- Add deny-spawn actor sets and literal entry/exit denial messages. Generate state
+  suggestions from the registry without restricting free-text flag values.
+- Upgrade schema 1/2 directly to schema 3 with a consistent original-version backup
+  and transactional validation. Older binaries require their pre-upgrade backup.
+- Piston boundaries, TNT ignition-origin tracking and additional numeric/location/
+  session-effect consumers remain unsupported. No native hooks are introduced.
+
+Read [the compatibility, commands and recovery contract](flag-semantics.md). This work
+is not deployed or released; actual BDS/client acceptance is still required.
+
 ## Unreleased: WG-1 region model
 
 - Add explicit cuboid, global and template kinds, bounded same-dimension parent hierarchies,

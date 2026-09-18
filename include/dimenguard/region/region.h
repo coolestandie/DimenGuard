@@ -42,6 +42,7 @@ struct Bounds {
 
     [[nodiscard]] static Bounds between(const BlockPosition &a, const BlockPosition &b);
     [[nodiscard]] bool contains(const BlockPosition &position) const;
+    [[nodiscard]] bool overlaps(const Bounds &other) const;
     bool operator==(const Bounds &) const = default;
 };
 
@@ -65,7 +66,7 @@ struct Region {
     int priority = 0;
     std::string owner;
     std::unordered_set<std::string> members;
-    std::map<Flag, FlagState> flags;
+    std::map<Flag, FlagValue> flags;
     RegionKind kind = RegionKind::Cuboid;
     std::optional<std::string> parent = std::nullopt;
     FlagState passthrough = FlagState::Inherit;

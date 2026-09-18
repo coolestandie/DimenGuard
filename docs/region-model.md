@@ -1,11 +1,15 @@
 # Region model: WG-1
 
+This document records the WG-1 baseline. [WG-2](flag-semantics.md) extends its values,
+explosion behavior and storage to schema 3; use that contract for the current branch.
+
 WG-1 is the unreleased domain and persistence foundation for the next update. It adds region
 hierarchy, dimension-wide policy, templates and groups to the existing shared protection
-resolver. The public `0.2.0-rc1` download is unchanged. Creating these new region types and
-editing parents, groups or passthrough through game commands belongs to the subsequent command
-phase. Existing commands continue to create cuboids. The service methods described below are
-internal implementation details, not a public plugin API.
+resolver. The public `0.2.0-rc1` download is unchanged. WG-3 now exposes validated parent and
+passthrough edits through region commands; global/template creation and group-specific command
+controls remain internal until a later phase. Existing create/claim commands continue to create
+cuboids. The service methods described below are internal implementation details, not a public
+plugin API.
 
 ## Region identity and shape
 
@@ -175,8 +179,8 @@ it, then replace live state only after commit. No native memory hooks or public 
 Offline tests cover legacy rules, boundaries, negative coordinates, independent levels and
 dimensions, parent overrides, groups, passthrough, global minimum priority, templates,
 copy/move safety, failed hierarchy changes, migration backup/rollback and round trips.
-Building the plugin verifies adapter integration. Bedrock gameplay acceptance and controls
-for the new model remain subsequent work; WG-1 does not deploy or update a public release.
+Building the plugin verifies adapter integration. Bedrock gameplay acceptance for WG-1 and WG-3
+commands remains pending; WG-1 did not deploy or update a public release.
 
 The independent design uses WorldGuard's official documentation as behavioral reference:
 [priorities and inheritance](https://worldguard.enginehub.org/en/latest/regions/priorities/),

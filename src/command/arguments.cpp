@@ -1,7 +1,30 @@
 #include "dimenguard/command/arguments.h"
 
+#include "dimenguard/command/catalog.h"
 #include "dimenguard/command/parse.h"
+
 namespace dimenguard {
+namespace {
+
+std::size_t regionArgumentLimit(std::string_view action)
+{
+    std::string path{"region "};
+    path += action;
+    for (const auto &command : commandCatalog()) {
+        if (command.path == path) {
+            return command.parameters.size() + 2;
+        }
+        for (const auto alias : commandAliases(command.path)) {
+            if (alias == action) {
+                return command.parameters.size() + 2;
+            }
+        }
+    }
+    return 6;
+}
+
+}
+
 std::optional<std::vector<std::string>> normalizeCommandArguments(std::span<const std::string> args)
 {
     if (args.empty()) {
@@ -19,7 +42,9 @@ std::optional<std::vector<std::string>> normalizeCommandArguments(std::span<cons
         return std::nullopt;
     }
     const auto tail = args.size() > prefix_size ? std::string_view(args.back()) : std::string_view{};
-    auto words = parseCommandArguments(tail, flag ? 3 : 2);
+    const auto max_count = region ? regionArgumentLimit(args[1]) : flag ? 3 : 2;
+    const auto message_tail = flag;
+    auto words = parseCommandArguments(tail, max_count, message_tail);
     if (!words) {
         return std::nullopt;
     }

@@ -1,45 +1,28 @@
 #include "dimenguard/region/flag.h"
 
+#include <algorithm>
 #include <array>
 #include <stdexcept>
 #include <utility>
 
 namespace dimenguard {
 namespace {
-struct FlagDefinition {
-    Flag flag;
-    std::string_view name;
-    FlagScope scope;
-    FlagDefault fallback;
-    std::optional<Flag> aggregate = std::nullopt;
-};
+constexpr FlagConstraint constraint(Flag flag)
+{
+    if (flag == Flag::EntryDenyMessage || flag == Flag::ExitDenyMessage) {
+        return FlagConstraint::PlainText;
+    }
+    if (flag == Flag::DenySpawn) {
+        return FlagConstraint::ActorIds;
+    }
+    return flag == Flag::NonPlayerProtectionDomains ? FlagConstraint::DomainIds : FlagConstraint::None;
+}
 constexpr std::array definitions{
-    FlagDefinition{Flag::Build, "build", FlagScope::Player, FlagDefault::Members},
-    FlagDefinition{Flag::Interact, "interact", FlagScope::Player, FlagDefault::Members},
-    FlagDefinition{Flag::ContainerAccess, "container-access", FlagScope::Player, FlagDefault::Members},
-    FlagDefinition{Flag::Pvp, "pvp", FlagScope::Player, FlagDefault::Allow},
-    FlagDefinition{Flag::Explosions, "explosions", FlagScope::Environment, FlagDefault::Allow},
-    FlagDefinition{Flag::FluidFlow, "fluid-flow", FlagScope::Environment, FlagDefault::Allow},
-    FlagDefinition{Flag::BlockForm, "block-form", FlagScope::Environment, FlagDefault::Allow},
-    FlagDefinition{Flag::LeafDecay, "leaf-decay", FlagScope::Environment, FlagDefault::Allow},
-    FlagDefinition{Flag::ActorGriefing, "actor-griefing", FlagScope::Environment, FlagDefault::Allow},
-    FlagDefinition{Flag::MobSpawning, "mob-spawning", FlagScope::Environment, FlagDefault::Allow},
-    FlagDefinition{Flag::MobDamage, "mob-damage", FlagScope::Environment, FlagDefault::Allow},
-    FlagDefinition{Flag::Entry, "entry", FlagScope::Transition, FlagDefault::Allow},
-    FlagDefinition{Flag::Exit, "exit", FlagScope::Transition, FlagDefault::Allow},
-    FlagDefinition{Flag::BlockBreak, "block-break", FlagScope::Player, FlagDefault::Members, Flag::Build},
-    FlagDefinition{Flag::BlockPlace, "block-place", FlagScope::Player, FlagDefault::Members, Flag::Build},
-    FlagDefinition{Flag::Use, "use", FlagScope::Player, FlagDefault::Members, Flag::Interact},
-    FlagDefinition{Flag::UseAnvil, "use-anvil", FlagScope::Player, FlagDefault::Members, Flag::Use},
-    FlagDefinition{Flag::Sleep, "sleep", FlagScope::Player, FlagDefault::Members, Flag::Interact},
-    FlagDefinition{Flag::ItemDrop, "item-drop", FlagScope::Player, FlagDefault::Allow},
-    FlagDefinition{Flag::ItemPickup, "item-pickup", FlagScope::Environment, FlagDefault::Allow},
-    FlagDefinition{Flag::SendChat, "send-chat", FlagScope::Player, FlagDefault::Allow},
-    FlagDefinition{Flag::WaterFlow, "water-flow", FlagScope::Environment, FlagDefault::Allow, Flag::FluidFlow},
-    FlagDefinition{Flag::LavaFlow, "lava-flow", FlagScope::Environment, FlagDefault::Allow, Flag::FluidFlow},
-    FlagDefinition{Flag::FallDamage, "fall-damage", FlagScope::Environment, FlagDefault::Allow},
-    FlagDefinition{Flag::FireworkDamage, "firework-damage", FlagScope::Environment, FlagDefault::Allow},
-    FlagDefinition{Flag::Invincible, "invincible", FlagScope::Environment, FlagDefault::Deny},
+#define DG_FLAG(id, name, scope, fallback, type, aggregate, description)                  \
+    FlagDefinition{Flag::id,       name,      FlagScope::scope,    FlagDefault::fallback, \
+                   FlagType::type, aggregate, constraint(Flag::id)},
+#include "dimenguard/region/flags.inc"
+#undef DG_FLAG
 };
 constexpr std::array state_names{
     std::pair{FlagState::Inherit, std::string_view{"inherit"}},
@@ -84,7 +67,8 @@ constexpr auto states = [] {
     }
     return values;
 }();
-const FlagDefinition &definition(Flag flag)
+}
+const FlagDefinition &flagDefinition(Flag flag)
 {
     const auto index = static_cast<std::size_t>(flag);
     if (index >= definitions.size()) {
@@ -92,22 +76,114 @@ const FlagDefinition &definition(Flag flag)
     }
     return definitions[index];
 }
-}
 std::string_view flagName(Flag flag)
 {
-    return definition(flag).name;
+    return flagDefinition(flag).name;
 }
 FlagScope flagScope(Flag flag)
 {
-    return definition(flag).scope;
+    return flagDefinition(flag).scope;
 }
 FlagDefault flagDefault(Flag flag)
 {
-    return definition(flag).fallback;
+    return flagDefinition(flag).fallback;
 }
 std::optional<Flag> flagFallback(Flag flag)
 {
-    return definition(flag).aggregate;
+    return flagDefinition(flag).aggregate;
+}
+std::span<const FlagDefinition> flagDefinitions()
+{
+    return definitions;
+}
+FlagType flagType(Flag flag)
+{
+    return flagDefinition(flag).type;
+}
+std::optional<FlagValue> flagDefaultValue(Flag flag)
+{
+    switch (flagDefault(flag)) {
+    case FlagDefault::Allow:
+        return FlagState::Allow;
+    case FlagDefault::Deny:
+        return FlagState::Deny;
+    case FlagDefault::EmptySet:
+        return FlagValue(FlagSet{});
+    case FlagDefault::Members:
+    case FlagDefault::None:
+        return std::nullopt;
+    }
+    throw std::invalid_argument("Unknown flag default");
+}
+void validateFlagValue(Flag flag, const FlagValue &value)
+{
+    const auto &definition = flagDefinition(flag);
+    validateFlagValue(definition.type, value);
+    if (definition.constraint == FlagConstraint::None) {
+        return;
+    }
+    if (definition.constraint == FlagConstraint::PlainText) {
+        if (value.get<std::string>()->find("\xc2\xa7") != std::string::npos) {
+            throw std::invalid_argument("Denial messages must not contain chat formatting codes");
+        }
+        return;
+    }
+    for (const auto &entry : *value.get<FlagSet>()) {
+        if (definition.constraint == FlagConstraint::ActorIds) {
+            const auto separator = entry.find(':');
+            if (separator == std::string::npos || separator == 0 || separator + 1 == entry.size() ||
+                entry.find(':', separator + 1) != std::string::npos ||
+                !std::ranges::all_of(entry,
+                                     [](char character) {
+                                         return (character >= 'a' && character <= 'z') ||
+                                                (character >= '0' && character <= '9') || character == ':' ||
+                                                character == '_' || character == '-' || character == '.' ||
+                                                character == '/';
+                                     }) ||
+                entry.substr(0, separator).find('/') != std::string::npos) {
+                throw std::invalid_argument("Actor identifiers require namespace:name");
+            }
+        }
+        else if (entry.size() > 64 || !std::ranges::all_of(entry, [](char character) {
+                     return (character >= 'a' && character <= 'z') || (character >= '0' && character <= '9') ||
+                            character == '-' || character == '_';
+                 })) {
+            throw std::invalid_argument("Protection domains require 1-64 canonical identifier characters");
+        }
+    }
+}
+std::optional<FlagValue> parseFlagValue(Flag flag, std::string_view text)
+{
+    auto value = parseFlagValue(flagType(flag), text);
+    if (!value) {
+        return std::nullopt;
+    }
+    try {
+        validateFlagValue(flag, *value);
+        return value;
+    }
+    catch (const std::invalid_argument &) {
+        return std::nullopt;
+    }
+}
+std::span<const std::string_view> flagValueSuggestions(Flag flag)
+{
+    static constexpr std::array states{std::string_view{"allow"}, std::string_view{"deny"}, std::string_view{"inherit"},
+                                       std::string_view{"--unset"}};
+    static constexpr std::array sets{std::string_view{"[]"}, std::string_view{"--unset"}};
+    static constexpr std::array booleans{std::string_view{"true"}, std::string_view{"false"},
+                                         std::string_view{"--unset"}};
+    static constexpr std::array unset{std::string_view{"--unset"}};
+    switch (flagType(flag)) {
+    case FlagType::State:
+        return states;
+    case FlagType::Set:
+        return sets;
+    case FlagType::Boolean:
+        return booleans;
+    default:
+        return unset;
+    }
 }
 std::span<const Flag> supportedFlags()
 {
@@ -131,6 +207,13 @@ std::string_view stateName(FlagState state)
         }
     }
     throw std::invalid_argument("Unknown region flag state");
+}
+std::string_view stateName(const FlagValue &value)
+{
+    if (const auto state = value.state()) {
+        return stateName(*state);
+    }
+    throw std::invalid_argument("A state name requires a state flag value");
 }
 std::span<const FlagState> supportedFlagStates()
 {

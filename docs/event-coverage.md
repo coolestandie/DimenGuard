@@ -1,5 +1,9 @@
 # Public-event coverage audit
 
+This audit describes the preview baseline. Unreleased WG-2 updates explosion filtering,
+source association and actor spawn sets; see [flag semantics](flag-semantics.md) and
+[the pinned explosion audit](wg2-explosion-audit.md) for those superseding contracts.
+
 This is a static source audit, performed on 2026-09-08 against Endstone API 0.12.0, checkout `2572cd304b5ca2d094e02a1b2f969f7632ea44f6`. No Bedrock server was started for this audit. A hook found in source is evidence of an intended event path, not a successful runtime protection test or a guarantee about every Bedrock interaction.
 
 A source comparison with the unmodified upstream pin

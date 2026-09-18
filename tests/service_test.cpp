@@ -219,12 +219,12 @@ TEST_F(ServiceTest, FailedReloadPreservesWorkingProtectionThenRecovers)
     original.flags[Flag::Pvp] = FlagState::Deny;
     RegionService service(path_);
     service.create(original);
-    executeRaw("UPDATE flags SET state = 'corrupt' WHERE name = 'pvp'");
+    executeRaw("UPDATE flags SET value = 'corrupt' WHERE name = 'pvp'");
     EXPECT_THROW(service.reload(), std::runtime_error);
     ASSERT_EQ(service.getRegions().getAll().size(), 1);
     expectRegionEqual(service.getRegions().getAll().front(), original);
     EXPECT_FALSE(service.getRegions().isAllowed(original.key.dimension, {0, 0, 0}, Flag::Pvp, "outsider"));
-    executeRaw("UPDATE flags SET state = 'allow' WHERE name = 'pvp'");
+    executeRaw("UPDATE flags SET value = 'allow' WHERE name = 'pvp'");
     service.reload();
     EXPECT_TRUE(service.getRegions().isAllowed(original.key.dimension, {0, 0, 0}, Flag::Pvp, "outsider"));
 }
@@ -239,7 +239,7 @@ TEST_F(ServiceTest, ChangedSchemaBlocksReloadAndWritesWithoutReplacingLiveRegion
     EXPECT_THROW(service.setPriority(original.key, 27), std::runtime_error);
     ASSERT_EQ(service.getRegions().getAll().size(), 1);
     expectRegionEqual(service.getRegions().getAll().front(), original);
-    executeRaw("PRAGMA user_version = 2");
+    executeRaw("PRAGMA user_version = 3");
     expectStored(original);
     service.reload();
     expectRegionEqual(service.getRegions().getAll().front(), original);
@@ -282,7 +282,7 @@ TEST_F(ServiceTest, RegionNamesRevisionChangesOnlyAfterSuccessfulCatalogMutation
     EXPECT_THROW(service.rename(original.key, "renamed"), std::runtime_error);
     EXPECT_THROW(service.reload(), std::runtime_error);
     EXPECT_EQ(service.getRegionNamesRevision(), revision);
-    executeRaw("PRAGMA user_version = 2");
+    executeRaw("PRAGMA user_version = 3");
     service.rename(original.key, "renamed");
     EXPECT_EQ(service.getRegionNamesRevision(), ++revision);
     service.reload();

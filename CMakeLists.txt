@@ -34,12 +34,15 @@ add_library(dimenguard_core STATIC
         src/region/region.cpp
         src/region/region_context.cpp
         src/region/flag.cpp
+        src/region/flag_value.cpp
         src/region/region_manager.cpp
         src/region/region_index.cpp
         src/region/protection_policy.cpp
         src/region/transition_policy.cpp
         src/rules/block_rules.cpp
         src/rules/damage_rules.cpp
+        src/rules/explosion_rules.cpp
+        src/rules/spawn_rules.cpp
 )
 target_include_directories(dimenguard_core PUBLIC include)
 target_compile_features(dimenguard_core PUBLIC cxx_std_20)
@@ -61,10 +64,12 @@ add_library(dimenguard_services STATIC
         src/storage/schema.cpp
         src/storage/snapshot.cpp
         src/service/region_service.cpp
+        src/service/region_geometry_service.cpp
         src/service/region_hierarchy_service.cpp
         src/service/region_policy_service.cpp
         src/command/catalog.cpp
         src/command/arguments.cpp
+        src/command/flag_input.cpp
         src/protocol/binary_stream.cpp
         src/protocol/command_suggestions.cpp
         src/i18n/translator.cpp
@@ -112,6 +117,7 @@ if (DIMENGUARD_BUILD_PLUGIN)
             src/listener/world_block_listener.cpp
             src/listener/explosion_listener.cpp
             src/listener/mob_listener.cpp
+            src/listener/spawn_listener.cpp
             src/listener/player_movement_listener.cpp
             src/listener/item_listener.cpp
             src/listener/player_activity_listener.cpp
@@ -131,7 +137,9 @@ if (BUILD_TESTING)
     add_executable(dimenguard_tests tests/region_test.cpp tests/storage_test.cpp tests/service_test.cpp
             tests/presentation_test.cpp tests/selection_test.cpp tests/coordinates_test.cpp tests/command_test.cpp
             tests/sqlite_test.cpp tests/protocol_test.cpp tests/world_policy_test.cpp tests/flag_fallback_test.cpp
-            tests/rules_test.cpp tests/wg1_region_test.cpp tests/wg1_storage_test.cpp)
+            tests/rules_test.cpp tests/wg1_region_test.cpp tests/wg1_storage_test.cpp
+            tests/wg2_flag_test.cpp tests/wg2_storage_test.cpp tests/wg2_explosion_test.cpp tests/wg2_integration_test.cpp)
+    target_sources(dimenguard_tests PRIVATE tests/wg3_region_test.cpp)
     target_link_libraries(dimenguard_tests PRIVATE dimenguard_services GTest::gtest_main)
     dimenguard_warnings(dimenguard_tests)
     include(GoogleTest)

@@ -275,7 +275,7 @@ TEST(CommandSuggestions, AcceptsIndependentProtocol2169Golden)
     ASSERT_TRUE(output);
     const auto rewritten = inspect(*output);
     EXPECT_EQ(rewritten.commands.at("dg").prefix, original.commands.at("dg").prefix);
-    EXPECT_EQ(rewritten.commands.at("dg").overloads.size(), commandCatalog().size());
+    EXPECT_EQ(rewritten.commands.at("dg").overloads.size(), clientCommandCatalog().size());
 }
 
 TEST(CommandSuggestions, PreservesUnrelatedCommandsAliasesAndIndexedData)
@@ -319,10 +319,10 @@ TEST(CommandSuggestions, ClientOverloadsMatchDetailedCatalogAndShareRegionSymbol
     ASSERT_TRUE(output);
     const auto packet = inspect(*output);
     const auto &overloads = packet.commands.at("dg").overloads;
-    const auto catalog = commandCatalog();
-    ASSERT_EQ(overloads.size(), 15);
+    const auto catalog = clientCommandCatalog();
     ASSERT_EQ(overloads.size(), catalog.size());
     std::set<std::uint32_t> region_symbols;
+    std::set<std::uint32_t> flag_symbols;
     std::size_t region_overloads = 0;
     for (std::size_t i = 0; i < catalog.size(); ++i) {
         const auto &command = catalog[i];
@@ -339,6 +339,9 @@ TEST(CommandSuggestions, ClientOverloadsMatchDetailedCatalogAndShareRegionSymbol
             if (offset == 0 && literal == "region") {
                 region_symbols.insert(parameters[offset].symbol);
                 ++region_overloads;
+            }
+            if (offset == 0 && literal == "flag") {
+                flag_symbols.insert(parameters[offset].symbol);
             }
             ++offset;
             path = space == path.npos ? std::string_view{} : path.substr(space + 1);
@@ -370,8 +373,9 @@ TEST(CommandSuggestions, ClientOverloadsMatchDetailedCatalogAndShareRegionSymbol
             }
         }
     }
-    EXPECT_EQ(region_overloads, 6);
+    EXPECT_EQ(region_overloads, 18);
     EXPECT_EQ(region_symbols.size(), 1);
+    EXPECT_EQ(flag_symbols.size(), 1);
 }
 
 TEST(CommandSuggestions, LeavesTheOriginalUntouchedWhenNoCustomCommandIsPresent)

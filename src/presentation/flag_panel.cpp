@@ -32,58 +32,11 @@ Message scopeHeading(FlagScope scope)
 Message flagDescription(Flag flag)
 {
     switch (flag) {
-    case Flag::Build:
-        return Message::FlagBuildDescription;
-    case Flag::Interact:
-        return Message::FlagInteractDescription;
-    case Flag::ContainerAccess:
-        return Message::FlagContainerDescription;
-    case Flag::Pvp:
-        return Message::FlagPvpDescription;
-    case Flag::Explosions:
-        return Message::FlagExplosionsDescription;
-    case Flag::FluidFlow:
-        return Message::FlagFluidFlowDescription;
-    case Flag::BlockForm:
-        return Message::FlagBlockFormDescription;
-    case Flag::LeafDecay:
-        return Message::FlagLeafDecayDescription;
-    case Flag::ActorGriefing:
-        return Message::FlagActorGriefingDescription;
-    case Flag::MobSpawning:
-        return Message::FlagMobSpawningDescription;
-    case Flag::MobDamage:
-        return Message::FlagMobDamageDescription;
-    case Flag::Entry:
-        return Message::FlagEntryDescription;
-    case Flag::Exit:
-        return Message::FlagExitDescription;
-    case Flag::BlockBreak:
-        return Message::FlagBlockBreakDescription;
-    case Flag::BlockPlace:
-        return Message::FlagBlockPlaceDescription;
-    case Flag::Use:
-        return Message::FlagUseDescription;
-    case Flag::UseAnvil:
-        return Message::FlagUseAnvilDescription;
-    case Flag::Sleep:
-        return Message::FlagSleepDescription;
-    case Flag::ItemDrop:
-        return Message::FlagItemDropDescription;
-    case Flag::ItemPickup:
-        return Message::FlagItemPickupDescription;
-    case Flag::SendChat:
-        return Message::FlagSendChatDescription;
-    case Flag::WaterFlow:
-        return Message::FlagWaterFlowDescription;
-    case Flag::LavaFlow:
-        return Message::FlagLavaFlowDescription;
-    case Flag::FallDamage:
-        return Message::FlagFallDamageDescription;
-    case Flag::FireworkDamage:
-        return Message::FlagFireworkDamageDescription;
-    case Flag::Invincible:
-        return Message::FlagInvincibleDescription;
+#define DG_FLAG(Id, Name, Scope, Default, Type, Fallback, Description) \
+    case Flag::Id:                                                     \
+        return Message::Description;
+#include "dimenguard/region/flags.inc"
+#undef DG_FLAG
     }
     throw std::invalid_argument("A supported flag has no description");
 }
@@ -118,6 +71,7 @@ void appendCatalogFooter(PanelBuilder &panel, Locale locale, bool can_manage)
     if (can_manage) {
         panel.line(translate(Message::FlagSyntax, locale, helpUsage(commandByPath("flag"))));
         panel.line(messageText(Message::FlagExample, locale));
+        panel.line(messageText(Message::FlagUnsetSyntax, locale));
     }
     appendPolicyNotes(panel, locale);
 }
@@ -188,6 +142,23 @@ std::vector<std::string> renderFlagCatalog(Locale locale)
     return std::move(page->lines);
 }
 
+std::string displayFlagValue(const FlagValue &value)
+{
+    const auto *text = value.get<std::string>();
+    if (!text) {
+        return formatFlagValue(value);
+    }
+    std::string quoted = "\"";
+    for (const auto character : *text) {
+        if (character == '\\' || character == '"') {
+            quoted += '\\';
+        }
+        quoted += character;
+    }
+    quoted += '"';
+    return quoted;
+}
+
 std::vector<std::string> renderRegionFlags(const Region &region, Locale locale, std::optional<Flag> selected)
 {
     if (selected) {
@@ -199,9 +170,34 @@ std::vector<std::string> renderRegionFlags(const Region &region, Locale locale, 
             continue;
         }
         const auto found = region.flags.find(flag);
-        const auto state = found == region.flags.end() ? FlagState::Inherit : found->second;
-        const auto value = std::format("{}{}", Theme::LightGray, stateName(state));
+        const auto stored =
+            found == region.flags.end()
+                ? (flagType(flag) == FlagType::State ? std::string{"inherit"}
+                                                     : std::string(messageText(Message::FlagValueUnset, locale)))
+                : displayFlagValue(found->second);
+        const auto value = std::format("{}{}", Theme::LightGray, stored);
         panel.line(translate(Message::FlagInfo, locale, flagName(flag), value), Theme::White, "  ");
+        if (selected) {
+            panel.line(translate(Message::FlagTypeInfo, locale, valueTypeName(flagType(flag))));
+            panel.line(messageText(flagDescription(flag), locale));
+            std::string choices;
+            for (const auto choice : flagValueSuggestions(flag)) {
+                if (!choices.empty()) {
+                    choices += ", ";
+                }
+                choices += choice;
+            }
+            panel.line(translate(Message::FlagValueHints, locale, choices));
+            const auto group = region.flag_groups.find(flag);
+            panel.line(translate(Message::FlagGroupInfo, locale,
+                                 group == region.flag_groups.end() ? "inherit" : regionGroupName(group->second)));
+            if (const auto base = flagFallback(flag)) {
+                panel.line(translate(Message::FlagBaseInfo, locale, flagName(*base)));
+            }
+            else if (flagType(flag) != FlagType::State) {
+                panel.line(messageText(Message::FlagTypedSyntax, locale));
+            }
+        }
     }
     panel.line(messageText(Message::FlagInheritance, locale));
     appendPolicyNotes(panel, locale);

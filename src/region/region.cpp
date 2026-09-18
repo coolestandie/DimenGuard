@@ -60,6 +60,12 @@ bool Bounds::contains(const BlockPosition &position) const
            position.z >= min.z && position.z <= max.z;
 }
 
+bool Bounds::overlaps(const Bounds &other) const
+{
+    return min.x <= other.max.x && max.x >= other.min.x && min.y <= other.max.y && max.y >= other.min.y &&
+           min.z <= other.max.z && max.z >= other.min.z;
+}
+
 bool Region::isMember(std::string_view player_id) const
 {
     return player_id == owner || members.contains(std::string(player_id));
@@ -97,9 +103,8 @@ void validateRegion(const Region &region)
     if (region.members.contains("")) {
         throw std::invalid_argument("Region member identities must not be empty");
     }
-    for (const auto &[flag, state] : region.flags) {
-        static_cast<void>(flagName(flag));
-        static_cast<void>(stateName(state));
+    for (const auto &[flag, value] : region.flags) {
+        validateFlagValue(flag, value);
     }
     for (const auto &[flag, group] : region.flag_groups) {
         static_cast<void>(regionGroupName(group));

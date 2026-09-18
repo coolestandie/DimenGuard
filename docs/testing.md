@@ -4,6 +4,56 @@ Offline tests and Bedrock runtime acceptance are separate checks. The gameplay/c
 below is **pending**. Successful startup alone does not establish runtime protection coverage.
 Read [event-coverage.md](event-coverage.md) for the source audit and known API limitations.
 
+## WG-2 acceptance (not run)
+
+Use the [WG-2 compatibility contract](flag-semantics.md), an exact-ABI DLL and a disposable
+world. None of the following checks has been marked as passed by the offline suite:
+
+- Migrate a copied schema 1 and schema 2 database; verify the untouched original-version
+  backup, groups/parents, restart, and reload. Never test migration on the only live copy.
+- Place TNT outside an inclusive cuboid boundary: outside terrain may break, protected target
+  blocks remain. Repeat inside the region and with block-break deny. Check actual server blocks.
+- Test negative coordinates, overlapping parents, shared/different domains and another dimension.
+  A domain on one overlapping region must not grant membership in an unrelated protected region.
+- Move primed TNT across the boundary before detonation: record the known current-origin limit.
+  This update does not claim ignition tracking or protection against that cannon path by default.
+- Compare TNT, TNT minecarts, creepers and unidentified beds/anchors with subtype/aggregate
+  conflicts. Check terrain and victim damage separately; confirm allowed terrain is retained.
+- Cancel or alter an explosion from another plugin; confirm prior cancellation and guarded errors.
+- Use deny-spawn with vanilla/custom actor IDs, empty sets, and mob-spawning deny. Verify removal
+  on reported additions, player exclusion and unchanged mobs outside the region.
+- Set English/Spanish denial text, quoted empty text and literal inherit. Check one-second
+  message throttling, inherited/grouped messages, exit-before-entry and unchanged-region silence.
+- Check `/dg flag` queries, per-flag state hints, free text/sets, quoted spaces, --unset, numeric
+  region names and both client languages. Invalid values must not alter saved or live rules.
+- Confirm unsupported piston/automation and unreported portal/spawn/damage routes are not
+  mistaken for coverage. The public upstream DLL is not the custom chunk-fork server build.
+
+## WG-3 acceptance (not run)
+
+Use the [WG-3 command administration contract](wg3-commands.md) on a disposable world and a
+DLL built for the exact server ABI. The offline suite validates parsing and service snapshots,
+but does not prove Bedrock command routing, client rendering or loaded-dimension identifiers.
+
+- [ ] Execute every player action: `/dg inspect`, create/claim, list with pages, info, flags,
+  priority/set-priority, parent clearing, passthrough, typed set/unset, select, redefine, move,
+  rename and delete/remove. Check success messages in English and Spanish.
+- [ ] Select negative and positive corners, inspect an overlapping location, load a stored cuboid
+  with `region select`, redefine it and move it by positive, negative and zero offsets. Verify the
+  final bounds in `/dg region info` and that overlap warnings name the final conflicts.
+- [ ] Create a parent/child/grandchild chain. Confirm an unconfirmed parent delete changes nothing;
+  `delete <parent> confirm` removes the complete tree and refreshes region-name suggestions.
+- [ ] Repeat commands with numeric region names, balanced quoted flag text and malformed quotes;
+  invalid values, extra arguments and move overflow must be rejected without a snapshot change.
+- [ ] From the console run `region list <level> <dimension> [page]`, info, flags, priority, parent,
+  passthrough, typed flag, rename, move and confirmed delete. Verify unknown levels/dimensions are
+  rejected before storage access; selection and membership commands must remain player-only.
+- [ ] Check canonical and alias paths in `/dg`, `/dg region` and protocol-2169 client suggestions.
+  Existing names are dimension-filtered, new names remain free text and suggestions refresh after
+  create, rename, delete, reload and dimension changes.
+- [ ] Verify `/dg help` uses the same action list and hides administrative rows for a sender without
+  `dimenguard.command`. Confirm `claim` is still admin-gated until WG-4 permissions are implemented.
+
 ## Offline checks
 
 Run `./scripts/build.ps1` from the repository root to build the plugin and run CTest. Use
@@ -77,13 +127,13 @@ authoritative world change. Mark unsupported cases as limitations, not passing p
 - [ ] Confirm `region` appears only once among the root suggestions. Execute every region action,
   not only `help dg`: `list`, `list 1`, `info spawn`, and create/rename/priority/delete on a disposable
   region. Verify missing/extra arguments and invalid integers are rejected without changing data.
-- [ ] Confirm `/dg flags` matches `/dg flags 1`. Across pages 1 through 5, collect all 26 descriptions
-  once, with no more than six per page and valid previous/next navigation. Reject pages 0, -1, 6,
+- [ ] Confirm `/dg flags` matches `/dg flags 1`. Across pages 1 through 6, collect all 33 descriptions
+  once, with no more than six per page and valid previous/next navigation. Reject pages 0, -1, 7,
   overflow and trailing arguments. Check console and client rendering in both languages.
 - [ ] As an administrator, `/dg flag` must show the first administrative catalog page, not all
-  26 descriptions in one chat dump. `/dg flag spawn` and
+  33 descriptions in one chat dump. `/dg flag spawn` and
   `/dg flag spawn build` must only read stored states; provide a state to change one. Test
-  all 26 flag/state suggestions and reject invalid values. A full stored-state query remains
+  all 33 flag/state suggestions and reject invalid values. A full stored-state query remains
   unpaged; it must not modify data.
 - [ ] Inspect `/dg help` in English and Spanish: framed heading, categorized command rows and
   no administrative rows for a player without `dimenguard.command`. Verify `DimenGuard >` colors.
@@ -223,7 +273,7 @@ authoritative world change. Mark unsupported cases as limitations, not passing p
   restart the server normally. Confirm every field and protection decision is restored.
 - [ ] Upgrade a disposable copy of an older four-/13-flag database; inherited new granular flags
   must retain old aggregate decisions and `invincible` must add no immunity. Save values from all
-  26 flags and reopen them. Do not assume an older plugin can read newer flag names after downgrade;
+  33 flags and reopen them. Do not assume an older plugin can read newer flag names after downgrade;
   keep the pre-upgrade backup.
 - [ ] Rename, delete and modify regions, then restart again. Confirm removed flags and members do
   not return. Untrusting an owner does not remove ownership; verify the distinction.

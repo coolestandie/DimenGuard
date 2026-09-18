@@ -77,24 +77,31 @@ void initializeSchema(const sqlite::Connection &connection)
             CREATE TABLE flags (
                 region_id INTEGER NOT NULL REFERENCES regions(id) ON DELETE CASCADE,
                 name TEXT NOT NULL,
-                state TEXT NOT NULL,
+                type TEXT NOT NULL,
+                value TEXT NOT NULL,
                 PRIMARY KEY (region_id, name)
             );
         )sql");
         createGroupSchema(connection);
-        connection.execute("PRAGMA user_version = 2");
+        connection.execute("PRAGMA user_version = 3");
     }
-    else if (version == 1) {
-        static_cast<void>(readSnapshot(connection, 1));
+    else if (version == 1 || version == 2) {
+        static_cast<void>(readSnapshot(connection, version));
         const auto backup_path = connection.backupBeforeMigration(version);
         try {
+            if (version == 1) {
+                connection.execute(R"sql(
+                    ALTER TABLE regions ADD COLUMN kind TEXT NOT NULL DEFAULT 'cuboid';
+                    ALTER TABLE regions ADD COLUMN parent TEXT;
+                    ALTER TABLE regions ADD COLUMN passthrough TEXT NOT NULL DEFAULT 'inherit';
+                )sql");
+                createGroupSchema(connection);
+            }
             connection.execute(R"sql(
-                ALTER TABLE regions ADD COLUMN kind TEXT NOT NULL DEFAULT 'cuboid';
-                ALTER TABLE regions ADD COLUMN parent TEXT;
-                ALTER TABLE regions ADD COLUMN passthrough TEXT NOT NULL DEFAULT 'inherit';
+                ALTER TABLE flags ADD COLUMN type TEXT NOT NULL DEFAULT 'state';
+                ALTER TABLE flags RENAME COLUMN state TO value;
             )sql");
-            createGroupSchema(connection);
-            connection.execute("PRAGMA user_version = 2");
+            connection.execute("PRAGMA user_version = 3");
             static_cast<void>(readSnapshot(connection, schema_version));
             transaction.commit();
             return;

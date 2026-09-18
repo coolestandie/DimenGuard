@@ -2,6 +2,7 @@
 
 #include "dimenguard/region/region.h"
 #include "dimenguard/region/region_index.h"
+#include "dimenguard/region/transition_policy.h"
 
 #include <cstddef>
 #include <map>
@@ -33,6 +34,8 @@ public:
 
     [[nodiscard]] const Region *find(const RegionKey &key) const;
     [[nodiscard]] std::vector<const Region *> inDimension(const DimensionKey &dimension) const;
+    [[nodiscard]] std::vector<const Region *> overlaps(const DimensionKey &dimension, const Bounds &bounds,
+                                                       std::optional<std::string_view> excluded = std::nullopt) const;
 
     /** Returns cuboids by descending priority, then ascending name, with the optional global last; no templates. */
     [[nodiscard]] std::vector<const Region *> query(const DimensionKey &dimension, const BlockPosition &position) const;
@@ -47,9 +50,18 @@ public:
                                  std::string_view player_id, bool bypass = false) const;
     [[nodiscard]] bool isEnvironmentAllowed(const DimensionKey &dimension, const BlockPosition &position,
                                             Flag flag) const;
+    [[nodiscard]] std::optional<FlagValue> getFlagValue(const DimensionKey &dimension, const BlockPosition &position,
+                                                        Flag flag,
+                                                        std::optional<std::string_view> player_id = std::nullopt) const;
+    [[nodiscard]] bool isNonPlayerAllowed(const DimensionKey &source_dimension, std::optional<BlockPosition> source,
+                                          const DimensionKey &target_dimension, const BlockPosition &target,
+                                          Flag flag = Flag::BlockBreak) const;
     [[nodiscard]] bool isTransitionAllowed(const DimensionKey &from_dimension, const BlockPosition &from,
                                            const DimensionKey &to_dimension, const BlockPosition &to,
                                            std::string_view player_id, bool bypass = false) const;
+    [[nodiscard]] std::optional<TransitionDenial> getTransitionDenial(
+        const DimensionKey &from_dimension, const BlockPosition &from, const DimensionKey &to_dimension,
+        const BlockPosition &to, std::string_view player_id, bool bypass = false) const;
 
 private:
     void swap(RegionManager &other) noexcept;

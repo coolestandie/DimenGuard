@@ -41,12 +41,34 @@ std::string usageFor(std::string_view path)
 TEST(CommandCatalog, ContainsEveryCommandPathExactlyOnce)
 {
     const std::set<std::string_view> expected{
-        "pos1",        "pos2",        "region create",   "region delete", "region rename",
-        "region list", "region info", "region priority", "flag",          "trust",
-        "untrust",     "help",        "reload",          "language",      "flags",
+        "pos1",
+        "pos2",
+        "inspect",
+        "region create",
+        "region claim",
+        "region delete",
+        "region rename",
+        "region redefine",
+        "region move",
+        "region list",
+        "region info",
+        "region flags",
+        "region priority",
+        "region set-parent",
+        "region set-passthrough",
+        "region set-flag",
+        "region unset-flag",
+        "region select",
+        "flag",
+        "trust",
+        "untrust",
+        "help",
+        "reload",
+        "language",
+        "flags",
     };
     const auto catalog = commandCatalog();
-    ASSERT_EQ(catalog.size(), 15);
+    ASSERT_EQ(catalog.size(), 25);
     std::set<std::string_view> actual;
     for (const auto &command : catalog) {
         EXPECT_TRUE(actual.insert(command.path).second) << command.path;
@@ -88,14 +110,14 @@ TEST(CommandCatalog, LogicalGrammarUsesPlayersAndNativeTailsAcceptNumericNames)
     EXPECT_EQ(helpUsage(findCommand("region rename")), "/dg region rename <region> <name>");
 }
 
-TEST(CommandCatalog, FlagStateAndLanguageChoicesMatchSupportedValues)
+TEST(CommandCatalog, FlagNamesAndLanguageChoicesMatchRegistryAndValueIsTypedByClientCatalog)
 {
     const auto &flag_command = findCommand("flag");
     ASSERT_EQ(flag_command.parameters.size(), 3);
     const auto &flags = flag_command.parameters[1];
     const auto &states = flag_command.parameters[2];
     EXPECT_EQ(flags.kind, ParameterKind::Choice);
-    EXPECT_EQ(states.kind, ParameterKind::Choice);
+    EXPECT_EQ(states.kind, ParameterKind::Message);
     EXPECT_TRUE(flag_command.parameters[0].optional);
     EXPECT_TRUE(flags.optional);
     EXPECT_TRUE(states.optional);
@@ -104,7 +126,7 @@ TEST(CommandCatalog, FlagStateAndLanguageChoicesMatchSupportedValues)
         supported_names.push_back(flagName(flag));
     }
     EXPECT_EQ(flags.choices, supported_names);
-    EXPECT_EQ(states.choices, (std::vector<std::string_view>{"inherit", "allow", "deny"}));
+    EXPECT_TRUE(states.choices.empty());
     for (const auto choice : flags.choices) {
         EXPECT_TRUE(parseFlag(choice)) << choice;
     }
@@ -112,7 +134,7 @@ TEST(CommandCatalog, FlagStateAndLanguageChoicesMatchSupportedValues)
         EXPECT_TRUE(parseState(choice)) << choice;
     }
     EXPECT_TRUE(usageFor("flag").ends_with(" [arguments: message]"));
-    EXPECT_EQ(helpUsage(flag_command), "/dg flag [region] [flag] [inherit|allow|deny]");
+    EXPECT_EQ(helpUsage(flag_command), "/dg flag [region] [flag] [value]");
 
     const auto &language = findCommand("language");
     ASSERT_EQ(language.parameters.size(), 1);
@@ -125,7 +147,7 @@ TEST(CommandCatalog, FlagStateAndLanguageChoicesMatchSupportedValues)
 TEST(CommandCatalog, EveryNativeOverloadAndEnumNameIsUnique)
 {
     const auto usages = nativeUsages();
-    ASSERT_EQ(usages.size(), 10);
+    ASSERT_EQ(usages.size(), 11);
     std::set<std::string> seen_usages;
     std::set<std::string> seen_enums;
     const std::regex enum_declaration{R"(\([^)]*\)[<\[][a-z0-9_-]+: ([A-Za-z][A-Za-z0-9_]*)[>\]])"};
@@ -163,8 +185,8 @@ TEST(CommandCatalog, NativeRootsNeverOverlapAcrossOverloads)
             remaining = separator == remaining.npos ? std::string_view{} : remaining.substr(separator + 1);
         }
     }
-    EXPECT_EQ(roots, (std::set<std::string>{"pos1", "pos2", "region", "flag", "trust", "untrust", "help", "reload",
-                                            "language", "flags"}));
+    EXPECT_EQ(roots, (std::set<std::string>{"pos1", "pos2", "inspect", "region", "flag", "trust", "untrust", "help",
+                                            "reload", "language", "flags"}));
 }
 
 TEST(CommandCatalog, RegionActionsShareOneOverloadAndComeFromDetailedCatalog)
@@ -180,12 +202,35 @@ TEST(CommandCatalog, RegionActionsShareOneOverloadAndComeFromDetailedCatalog)
                 expected_actions += '|';
             }
             expected_actions += command.path.substr(7);
+            for (const auto alias : commandAliases(command.path)) {
+                expected_actions += '|';
+                expected_actions += alias;
+            }
             EXPECT_EQ(usageFor(command.path), usage);
         }
     }
     EXPECT_EQ(match[1].str(), expected_actions);
     EXPECT_TRUE(usage.ends_with(" [arguments: message]"));
     EXPECT_EQ(usage.find("[name_or_page: str]"), std::string::npos);
+}
+
+TEST(CommandCatalog, RegionAliasesShareCanonicalSemantics)
+{
+    EXPECT_TRUE(std::ranges::equal(commandAliases("region create"), std::vector<std::string_view>{"define"}));
+    EXPECT_TRUE(std::ranges::equal(commandAliases("region delete"), std::vector<std::string_view>{"remove"}));
+    EXPECT_TRUE(std::ranges::equal(commandAliases("region priority"), std::vector<std::string_view>{"set-priority"}));
+    EXPECT_TRUE(commandAliases("region info").empty());
+
+    const auto client_catalog = clientCommandCatalog();
+    const auto has_path = [&client_catalog](std::string_view path) {
+        return std::ranges::any_of(client_catalog, [path](const CommandSpec &command) { return command.path == path; });
+    };
+    EXPECT_TRUE(has_path("region create"));
+    EXPECT_TRUE(has_path("region define"));
+    EXPECT_TRUE(has_path("region delete"));
+    EXPECT_TRUE(has_path("region remove"));
+    EXPECT_TRUE(has_path("region priority"));
+    EXPECT_TRUE(has_path("region set-priority"));
 }
 
 TEST(CommandNormalization, SplitsOnlyNativeMessageTails)
@@ -204,11 +249,18 @@ TEST(CommandNormalization, SplitsOnlyNativeMessageTails)
               (std::vector<std::string>{"trust", "123", "Player With Spaces"}));
     EXPECT_EQ(normalize({"untrust", "123 IKyel0I"}), (std::vector<std::string>{"untrust", "123", "IKyel0I"}));
     EXPECT_FALSE(normalize({"region"}));
-    EXPECT_FALSE(normalize({"region", "rename", "a b extra"}));
-    EXPECT_FALSE(normalize({"flag", "test build deny extra"}));
+    EXPECT_EQ(normalize({"region", "rename", "a b extra"}),
+              (std::vector<std::string>{"region", "rename", "a", "b", "extra"}));
+    EXPECT_EQ(normalize({"flag", "test build deny extra"}),
+              (std::vector<std::string>{"flag", "test", "build", "deny extra"}));
     EXPECT_FALSE(normalize({"trust", "test a b"}));
     EXPECT_FALSE(normalize({"trust", "test \"broken"}));
     EXPECT_FALSE(normalize({"region", "list", "1", "2"}));
+    EXPECT_EQ(normalize({"region", "list", "survival minecraft:overworld 2"}),
+              (std::vector<std::string>{"region", "list", "survival", "minecraft:overworld", "2"}));
+    EXPECT_EQ(
+        normalize({"region", "set-flag", "survival minecraft:overworld spawn pvp deny"}),
+        (std::vector<std::string>{"region", "set-flag", "survival", "minecraft:overworld", "spawn", "pvp", "deny"}));
 }
 
 TEST(CommandArgumentsParsing, PreservesListPriorityAndRenameArguments)
