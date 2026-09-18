@@ -68,8 +68,9 @@ add_library(dimenguard_services STATIC
         src/service/region_hierarchy_service.cpp
         src/service/region_policy_service.cpp
         src/command/catalog.cpp
-        src/command/arguments.cpp
-        src/command/flag_input.cpp
+            src/command/arguments.cpp
+            src/command/flag_input.cpp
+            src/command/permissions.cpp
         src/protocol/binary_stream.cpp
         src/protocol/command_suggestions.cpp
         src/i18n/translator.cpp
@@ -102,6 +103,7 @@ if (DIMENGUARD_BUILD_PLUGIN)
             src/plugin.cpp
             src/command/command_handler.cpp
             src/command/context.cpp
+            src/command/authorization.cpp
             src/command/handlers/general_commands.cpp
             src/command/handlers/selection_commands.cpp
             src/command/handlers/region_commands.cpp
@@ -138,7 +140,8 @@ if (BUILD_TESTING)
             tests/presentation_test.cpp tests/selection_test.cpp tests/coordinates_test.cpp tests/command_test.cpp
             tests/sqlite_test.cpp tests/protocol_test.cpp tests/world_policy_test.cpp tests/flag_fallback_test.cpp
             tests/rules_test.cpp tests/wg1_region_test.cpp tests/wg1_storage_test.cpp
-            tests/wg2_flag_test.cpp tests/wg2_storage_test.cpp tests/wg2_explosion_test.cpp tests/wg2_integration_test.cpp)
+            tests/wg2_flag_test.cpp tests/wg2_storage_test.cpp tests/wg2_explosion_test.cpp tests/wg2_integration_test.cpp
+            tests/wg4_permission_test.cpp)
     target_sources(dimenguard_tests PRIVATE tests/wg3_region_test.cpp)
     target_link_libraries(dimenguard_tests PRIVATE dimenguard_services GTest::gtest_main)
     dimenguard_warnings(dimenguard_tests)

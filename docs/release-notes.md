@@ -1,5 +1,16 @@
 # Release notes
 
+## Unreleased: WG-4 permissions and ownership
+
+- Replace direct use of the single administration check with operation-specific permission nodes,
+  owner/member scopes and explicit flag/value grants.
+- Add `/dg region set-owner`, bounded player claims, overlap rejection and claim-count/volume limits.
+- Keep `dimenguard.bypass` independent from both operator status and administration permissions.
+- Retain the `dimenguard.command` aggregate as a migration path; runtime permission-provider acceptance
+  and disposable-server claim tests remain pending.
+
+See [the WG-4 permission contract](wg4-permissions.md).
+
 ## Unreleased: WG-3 region administration commands
 
 - Expand region administration with `create`/`define`, `claim`, `delete`/`remove`, `rename`,
@@ -13,7 +24,7 @@
   including the `define`, `remove` and `set-priority` aliases.
 
 Read [the WG-3 command administration contract](wg3-commands.md). This work is not deployed or
-released; client/gameplay acceptance and WG-4 least-privilege permissions remain pending.
+released; client/gameplay acceptance and live permission-provider acceptance remain pending.
 
 ## Unreleased: WG-2 unified flag semantics
 

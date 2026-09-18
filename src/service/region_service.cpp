@@ -79,6 +79,11 @@ void RegionService::reload()
 void RegionService::create(Region region)
 {
     requireValidName(region.key.name);
+    const bool ordered = region.bounds.min.x <= region.bounds.max.x && region.bounds.min.y <= region.bounds.max.y &&
+                         region.bounds.min.z <= region.bounds.max.z;
+    if (ordered && region.kind == RegionKind::Cuboid && boundsVolume(region.bounds) > MaxCuboidVolume) {
+        throw ServiceError(ServiceErrorCode::VolumeLimit, "The cuboid exceeds the supported volume limit.");
+    }
     if (region.key.name == global_region_name && region.kind != RegionKind::Global) {
         throw ServiceError(ServiceErrorCode::InvalidName, "This name is reserved for the dimension's global region.");
     }
@@ -92,6 +97,30 @@ void RegionService::create(Region region)
     candidate.push_back(std::move(region));
     replaceSnapshot(std::move(candidate));
     ++region_names_revision_;
+}
+
+void RegionService::claim(DimensionKey dimension, std::string name, Bounds bounds, std::string owner)
+{
+    if (owner.empty()) {
+        throw ServiceError(ServiceErrorCode::InvalidName, "Claim owners must not be empty.");
+    }
+    if (bounds.min.x > bounds.max.x || bounds.min.y > bounds.max.y || bounds.min.z > bounds.max.z) {
+        throw ServiceError(ServiceErrorCode::InvalidBounds, "Region bounds must be ordered on every axis.");
+    }
+    if (boundsVolume(bounds) > MaxClaimVolume) {
+        throw ServiceError(ServiceErrorCode::VolumeLimit, "The claim exceeds the supported volume limit.");
+    }
+    if (regions_.countOwned(owner) >= MaxClaimedRegions) {
+        throw ServiceError(ServiceErrorCode::ClaimLimit, "The owner has reached the claim limit.");
+    }
+    if (!regions_.overlaps(dimension, bounds).empty()) {
+        throw ServiceError(ServiceErrorCode::ClaimOverlap, "Claims cannot overlap an existing cuboid.");
+    }
+    Region region;
+    region.key = {std::move(dimension), std::move(name)};
+    region.bounds = bounds;
+    region.owner = std::move(owner);
+    create(std::move(region));
 }
 
 void RegionService::createGlobal(DimensionKey dimension, std::string owner)

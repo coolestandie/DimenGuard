@@ -24,10 +24,11 @@ commands and schema 3 recovery procedure; the reference below describes the publ
 WG-2 does not add piston protection or track TNT's original ignition position. Gameplay/client
 acceptance and a separately authorized deployment remain required.
 
-This branch adds the unreleased WG-3 [region administration commands](docs/wg3-commands.md):
+This branch adds the unreleased WG-3 [region administration commands](docs/wg3-commands.md) and
+the first WG-4 [permission and ownership layer](docs/wg4-permissions.md):
 aliases, selection inspection, safe hierarchy edits, overlap diagnostics, console
-level/dimension targeting and generated autocomplete. WG-3 keeps the existing administrative
-permission gate; least-privilege permissions and player claiming remain WG-4 work.
+level/dimension targeting and generated autocomplete. WG-4 adds operation permissions, owner/member
+scopes, flag/value grants, ownership transfer and bounded player claims.
 
 ## Build
 
@@ -68,7 +69,8 @@ For domain and service development without building the plugin adapter:
 
 ## Create a protected region
 
-Use an account with `dimenguard.command`, stand at the first corner, and run `/dg pos1`.
+Use an account with `dimenguard.region.selection` and `dimenguard.region.create` (or the legacy
+`dimenguard.command` aggregate), stand at the first corner, and run `/dg pos1`.
 Move to the opposite corner and run `/dg pos2`, then:
 
 ```text
@@ -103,7 +105,7 @@ are preserved.
 | `/dg pos1`, `/dg pos2` | Select the block at the player's current position. |
 | `/dg inspect` | Show regions at the player's current block. |
 | `/dg region create <name>` | Create a region from the current selection. |
-| `/dg region claim <name>` | Administrative synonym for `create`. |
+| `/dg region claim <name>` | Player claim with explicit claim permission and bounded ownership. |
 | `/dg region delete <name> [confirm]` | Delete a region; confirm to cascade through children. |
 | `/dg region rename <name> <new-name>` | Rename a region in the current dimension. |
 | `/dg region redefine <name>` | Replace a region's bounds with the current selection. |
@@ -114,6 +116,7 @@ are preserved.
 | `/dg region priority <name> <integer>` | Set a signed 32-bit priority; larger numbers take precedence. |
 | `/dg region set-parent <name> <parent\|none>` | Set or clear a validated parent link. |
 | `/dg region set-passthrough <name> <state>` | Set membership passthrough to `allow`, `deny` or `inherit`. |
+| `/dg region set-owner <name> <player>` | Transfer ownership to an online player. |
 | `/dg region set-flag <name> <flag> <value>` | Set one typed flag value. |
 | `/dg region unset-flag <name> <flag>` | Clear one stored flag override. |
 | `/dg region select <name>` | Load a cuboid into the current selection. |
@@ -127,13 +130,16 @@ are preserved.
 | `/dg language <en\|es>` | Choose the message language for the current player session. |
 
 `dimenguard.use` defaults to everyone and permits help, flag discovery and language commands.
-`dimenguard.command` defaults to operators and grants administration. Region ownership alone
-does not grant that permission. `dimenguard.bypass` defaults to **false, including for operators**;
-grant it explicitly through your permission system if an account should bypass region decisions.
+WG-4 exposes separate `dimenguard.region.*` operation nodes plus `.own` and `.member` scopes.
+The legacy `dimenguard.command` node remains an operator-default aggregate for migration; region
+ownership alone does not grant administration. `dimenguard.bypass` defaults to **false, including
+for operators**; grant it explicitly through your permission system if an account should bypass
+region decisions.
 An operator with command access still follows protection rules unless explicitly granted bypass.
 The console can use help, reload and the flag catalog. Region commands from the console require
 an explicit `<level> <dimension>` after the action; selection-based actions and membership
 commands still require an in-game player. See [WG-3 command administration](docs/wg3-commands.md)
+and [WG-4 permissions](docs/wg4-permissions.md)
 for examples and confirmation rules.
 
 On protocol 2169, the public outgoing-packet API supplies exact client command paths, flags,

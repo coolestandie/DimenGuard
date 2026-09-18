@@ -1,4 +1,6 @@
 #include "dimenguard/command/catalog.h"
+#include "dimenguard/command/permissions.h"
+#include "dimenguard/region/flag.h"
 
 #include <algorithm>
 #include <endstone/permissions/permission.h>
@@ -63,16 +65,29 @@ TEST_F(PluginContractTest, CommandMetadataPreservesAliasAndPublicEntryPermission
 TEST_F(PluginContractTest, AdministrationAndBypassHaveSeparatePermissionDefaults)
 {
     auto permissions = plugin_->getDescription().getPermissions();
-    ASSERT_EQ(permissions.size(), 3);
-    const auto check_permission = [&](const std::string &name, endstone::PermissionDefault expected_default) {
+    const auto check_permission = [&](const std::string &name, endstone::PermissionDefault expected_default,
+                                      bool expects_children = false) {
         const auto found = std::ranges::find(permissions, name, &endstone::Permission::getName);
         ASSERT_NE(found, permissions.end()) << name;
         EXPECT_EQ(found->getDefault(), expected_default) << name;
-        EXPECT_TRUE(found->getChildren().empty()) << name;
+        EXPECT_EQ(found->getChildren().empty(), !expects_children) << name;
     };
     check_permission("dimenguard.use", endstone::PermissionDefault::True);
-    check_permission("dimenguard.command", endstone::PermissionDefault::Operator);
+    check_permission("dimenguard.command", endstone::PermissionDefault::Operator, true);
+    check_permission("dimenguard.recovery", endstone::PermissionDefault::Operator);
     check_permission("dimenguard.bypass", endstone::PermissionDefault::False);
+    check_permission("dimenguard.region.claim", endstone::PermissionDefault::False);
+    check_permission("dimenguard.region.claim.own", endstone::PermissionDefault::False);
+    check_permission("dimenguard.region.claim.member", endstone::PermissionDefault::False);
+    check_permission("dimenguard.region.flag.pvp", endstone::PermissionDefault::False);
+    check_permission("dimenguard.region.flag.pvp.deny", endstone::PermissionDefault::False);
+    check_permission("dimenguard.region.flag.*", endstone::PermissionDefault::False);
+    EXPECT_GT(permissions.size(), 200);
+    for (const auto command_permission : commandPermissions()) {
+        check_permission(std::string(permissionName(command_permission)),
+                         command_permission == CommandPermission::Recovery ? endstone::PermissionDefault::Operator
+                                                                           : endstone::PermissionDefault::False);
+    }
 }
 
 }

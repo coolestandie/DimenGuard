@@ -14,8 +14,7 @@ DG_MESSAGE(HelpSelectSecond, "Select the second corner.", "Selecciona la segunda
 DG_MESSAGE(HelpInspect, "Inspect regions at your position.", "Inspecciona las regiones en tu posición.")
 DG_MESSAGE(Redefined, "Region '{0}' bounds replaced from your selection.",
            "Los límites de la región '{0}' se reemplazaron con tu selección.")
-DG_MESSAGE(Moved, "Region '{0}' moved by ({1}, {2}, {3}) blocks.",
-           "La región '{0}' se movió ({1}, {2}, {3}) bloques.")
+DG_MESSAGE(Moved, "Region '{0}' moved by ({1}, {2}, {3}) blocks.", "La región '{0}' se movió ({1}, {2}, {3}) bloques.")
 DG_MESSAGE(ParentSet, "Region '{0}' now inherits from '{1}'.", "La región '{0}' ahora hereda de '{1}'.")
 DG_MESSAGE(ParentCleared, "Region '{0}' no longer has a parent.", "La región '{0}' ya no tiene padre.")
 DG_MESSAGE(PassthroughSet, "Region '{0}' passthrough set to {1}.", "Passthrough de la región '{0}' establecido en {1}.")
@@ -24,8 +23,7 @@ DG_MESSAGE(OverlapWarning, "Region overlaps {0} existing cuboid region(s): {1}."
            "La región se superpone con {0} región(es) cuboide(s): {1}.")
 DG_MESSAGE(DeletedCascade, "Region '{0}' and its child regions were deleted.",
            "La región '{0}' y sus regiones hijas fueron eliminadas.")
-DG_MESSAGE(Inspect, "Regions at ({0}, {1}, {2}) in {3}: {4}.",
-           "Regiones en ({0}, {1}, {2}) de {3}: {4}.")
+DG_MESSAGE(Inspect, "Regions at ({0}, {1}, {2}) in {3}: {4}.", "Regiones en ({0}, {1}, {2}) de {3}: {4}.")
 DG_MESSAGE(InspectItem, "{0} [{1}, priority {2}] owner {3}.", "{0} [{1}, prioridad {2}] propietario {3}.")
 DG_MESSAGE(HelpCreate, "Protect your selection.", "Protege tu selección.")
 DG_MESSAGE(HelpClaim, "Claim your selection.", "Reclama tu selección.")
@@ -39,6 +37,7 @@ DG_MESSAGE(HelpRegionFlags, "View this region's stored flags.", "Consulta las fl
 DG_MESSAGE(HelpPriority, "Resolve overlapping regions.", "Resuelve regiones superpuestas.")
 DG_MESSAGE(HelpSetParent, "Set or clear a region parent.", "Establece o borra el padre de una región.")
 DG_MESSAGE(HelpSetPassthrough, "Set membership passthrough.", "Establece el passthrough de membresía.")
+DG_MESSAGE(HelpSetOwner, "Transfer region ownership.", "Transfiere la propiedad de la región.")
 DG_MESSAGE(HelpSetFlag, "Set a typed region flag.", "Establece una flag tipada de región.")
 DG_MESSAGE(HelpUnsetFlag, "Clear a region flag override.", "Borra el valor guardado de una flag.")
 DG_MESSAGE(HelpSelectRegion, "Load a region into your selection.", "Carga una región en tu selección.")
@@ -101,8 +100,7 @@ DG_MESSAGE(FlagTypedSyntax, "Text accepts spaces; sets use comma-separated IDs o
            "El texto admite espacios; los conjuntos usan IDs separados por comas o [] para vaciarlos.")
 DG_MESSAGE(FlagUnsetSyntax, "Clear any stored value: /dg flag <region> <flag> --unset",
            "Borra cualquier valor guardado: /dg flag <region> <flag> --unset")
-DG_MESSAGE(FlagCleared, "Region '{0}': {1} now inherits its value.",
-           "Región '{0}': {1} ahora hereda su valor.")
+DG_MESSAGE(FlagCleared, "Region '{0}': {1} now inherits its value.", "Región '{0}': {1} ahora hereda su valor.")
 DG_MESSAGE(InvalidFlagValue, "Invalid value. Query /dg flag <region> <flag> to see its type; --unset clears it.",
            "Valor inválido. Consulta /dg flag <region> <flag> para ver su tipo; --unset lo borra.")
 DG_MESSAGE(FlagTntDescription, "Reported TNT explosions; block damage also checks source-region protection.",
@@ -193,8 +191,15 @@ DG_MESSAGE(InvalidFlag, "Unknown flag or state. Use /dg flags to view the availa
 DG_MESSAGE(PrioritySet, "Region '{0}' priority set to {1}.", "Prioridad de la región '{0}' establecida en {1}.")
 DG_MESSAGE(PlayerNotFound, "Choose one online player by name.", "Elige a un jugador conectado por su nombre.")
 DG_MESSAGE(MemberSet, "Region '{0}': membership updated for {1}.", "Región '{0}': membresía actualizada para {1}.")
+DG_MESSAGE(OwnerSet, "Region '{0}'s owner is now {1}.", "El propietario de la región '{0}' ahora es {1}.")
 DG_MESSAGE(Reloaded, "Loaded {0} regions from storage.", "Se cargaron {0} regiones del almacenamiento.")
 DG_MESSAGE(LanguageSet, "Language: {0}. This setting lasts for your current session.",
            "Idioma: {0}. Esta opción dura hasta que termine tu sesión.")
 DG_MESSAGE(Denied, "This region does not allow that action.", "Esta región no permite esa acción.")
 DG_MESSAGE(LimitReached, "The region limit has been reached (10,000).", "Se alcanzó el límite de regiones (10 000).")
+DG_MESSAGE(VolumeLimit, "The region is larger than the supported volume limit.",
+           "La región supera el límite de volumen permitido.")
+DG_MESSAGE(ClaimLimit, "You have reached the maximum number of claimed regions.",
+           "Alcanzaste el número máximo de regiones reclamadas.")
+DG_MESSAGE(ClaimOverlap, "Claims cannot overlap another physical region.",
+           "Las reclamaciones no pueden superponerse con otra región física.")

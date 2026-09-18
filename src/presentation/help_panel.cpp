@@ -1,6 +1,7 @@
 #include "dimenguard/presentation/help_panel.h"
 
 #include "dimenguard/command/catalog.h"
+#include "dimenguard/command/permissions.h"
 #include "dimenguard/presentation/panel.h"
 
 #include <format>
@@ -9,11 +10,13 @@
 namespace dimenguard {
 namespace {
 
-void appendSection(PanelBuilder &panel, Locale locale, bool can_manage, CommandSection section, Message heading)
+void appendSection(PanelBuilder &panel, Locale locale, const HelpPermissionCheck &can_use, CommandSection section,
+                   Message heading)
 {
     bool started = false;
     for (const auto &entry : commandCatalog()) {
-        if (entry.section != section || (entry.requires_admin && !can_manage)) {
+        const auto permission = permissionForCommand(entry.path);
+        if (entry.section != section || (permission && !can_use(permissionName(*permission)))) {
             continue;
         }
         if (!started) {
@@ -32,14 +35,19 @@ void appendSection(PanelBuilder &panel, Locale locale, bool can_manage, CommandS
 
 }
 
-std::vector<std::string> renderHelp(Locale locale, bool can_manage)
+std::vector<std::string> renderHelp(Locale locale, const HelpPermissionCheck &can_use)
 {
     PanelBuilder panel(messageText(Message::Help, locale));
-    appendSection(panel, locale, can_manage, CommandSection::Selection, Message::HelpSelection);
-    appendSection(panel, locale, can_manage, CommandSection::Regions, Message::HelpRegions);
-    appendSection(panel, locale, can_manage, CommandSection::Protection, Message::HelpProtection);
-    appendSection(panel, locale, can_manage, CommandSection::General, Message::HelpGeneral);
+    appendSection(panel, locale, can_use, CommandSection::Selection, Message::HelpSelection);
+    appendSection(panel, locale, can_use, CommandSection::Regions, Message::HelpRegions);
+    appendSection(panel, locale, can_use, CommandSection::Protection, Message::HelpProtection);
+    appendSection(panel, locale, can_use, CommandSection::General, Message::HelpGeneral);
     return std::move(panel).finish();
+}
+
+std::vector<std::string> renderHelp(Locale locale, bool can_manage)
+{
+    return renderHelp(locale, [can_manage](std::string_view) { return can_manage; });
 }
 
 }

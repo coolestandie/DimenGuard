@@ -4,6 +4,7 @@
 
 #include <compare>
 #include <cstddef>
+#include <cstdint>
 #include <map>
 #include <optional>
 #include <span>
@@ -47,6 +48,7 @@ struct Bounds {
 };
 
 [[nodiscard]] bool isValidRegionName(std::string_view name);
+[[nodiscard]] std::uint64_t boundsVolume(const Bounds &bounds);
 
 enum class RegionKind {
     Cuboid,

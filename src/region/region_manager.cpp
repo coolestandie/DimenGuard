@@ -69,6 +69,11 @@ const Region *RegionManager::find(const RegionKey &key) const
     return found == keys_.end() ? nullptr : &regions_[found->second];
 }
 
+std::size_t RegionManager::countOwned(std::string_view owner) const noexcept
+{
+    return static_cast<std::size_t>(std::ranges::count(regions_, owner, &Region::owner));
+}
+
 std::vector<const Region *> RegionManager::inDimension(const DimensionKey &dimension) const
 {
     std::vector<const Region *> result;

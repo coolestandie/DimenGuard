@@ -6,10 +6,10 @@ explosion behavior and storage to schema 3; use that contract for the current br
 WG-1 is the unreleased domain and persistence foundation for the next update. It adds region
 hierarchy, dimension-wide policy, templates and groups to the existing shared protection
 resolver. The public `0.2.0-rc1` download is unchanged. WG-3 now exposes validated parent and
-passthrough edits through region commands; global/template creation and group-specific command
-controls remain internal until a later phase. Existing create/claim commands continue to create
-cuboids. The service methods described below are internal implementation details, not a public
-plugin API.
+passthrough edits through region commands. WG-4 now exposes least-privilege operation permissions,
+owner/member scopes, ownership transfer and bounded player claims; global/template creation and
+group-specific command controls remain internal until a later phase. The service methods described
+below are internal implementation details, not a public plugin API.
 
 ## Region identity and shape
 

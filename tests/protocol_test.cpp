@@ -373,7 +373,7 @@ TEST(CommandSuggestions, ClientOverloadsMatchDetailedCatalogAndShareRegionSymbol
             }
         }
     }
-    EXPECT_EQ(region_overloads, 18);
+    EXPECT_EQ(region_overloads, 19);
     EXPECT_EQ(region_symbols.size(), 1);
     EXPECT_EQ(flag_symbols.size(), 1);
 }
