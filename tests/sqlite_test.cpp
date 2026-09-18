@@ -47,6 +47,27 @@ TEST_F(SqliteTest, TypedColumnsRejectImplicitConversionAndOverflow)
     EXPECT_EQ(query.integer(2), 2147483648LL);
 }
 
+TEST_F(SqliteTest, NullableTextKeepsNullDistinctFromEmptyAndRejectsOtherTypes)
+{
+    sqlite::Connection connection(path_);
+    connection.execute("CREATE TABLE sample (value TEXT)");
+    sqlite::Statement insert(connection, "INSERT INTO sample (value) VALUES (?)");
+    insert.bindNull(1);
+    insert.run();
+    insert.bind(1, "");
+    insert.run();
+    sqlite::Statement query(connection, "SELECT value FROM sample ORDER BY rowid");
+    ASSERT_TRUE(query.next());
+    EXPECT_FALSE(query.optionalText(0));
+    ASSERT_TRUE(query.next());
+    ASSERT_TRUE(query.optionalText(0));
+    EXPECT_EQ(*query.optionalText(0), "");
+    EXPECT_THROW(static_cast<void>(query.optionalText(1)), std::out_of_range);
+    sqlite::Statement invalid(connection, "SELECT 42");
+    ASSERT_TRUE(invalid.next());
+    EXPECT_THROW(static_cast<void>(invalid.optionalText(0)), std::runtime_error);
+}
+
 TEST_F(SqliteTest, FailedCommitRollsBackThenConnectionCanBeReused)
 {
     sqlite::Connection connection(path_, 0);

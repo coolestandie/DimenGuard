@@ -36,6 +36,7 @@ void RegionManager::swap(RegionManager &other) noexcept
 {
     regions_.swap(other.regions_);
     keys_.swap(other.keys_);
+    parent_indices_.swap(other.parent_indices_);
     index_.swap(other.index_);
 }
 
@@ -46,14 +47,17 @@ const std::vector<Region> &RegionManager::getAll() const
 
 void RegionManager::replaceAll(std::vector<Region> regions)
 {
+    validateRegions(regions);
     RegionManager replacement;
     replacement.regions_ = std::move(regions);
     for (std::size_t index = 0; index < replacement.regions_.size(); ++index) {
         const auto &region = replacement.regions_[index];
-        validateRegion(region);
-        if (!replacement.keys_.emplace(region.key, index).second) {
-            throw std::invalid_argument("Duplicate region name within the same level and dimension");
-        }
+        replacement.keys_.emplace(region.key, index);
+    }
+    replacement.parent_indices_.reserve(replacement.regions_.size());
+    for (const auto &region : replacement.regions_) {
+        replacement.parent_indices_.push_back(
+            region.parent ? std::optional{replacement.keys_.at({region.key.dimension, *region.parent})} : std::nullopt);
     }
     replacement.index_.replaceAll(replacement.regions_);
     swap(replacement);
@@ -83,8 +87,12 @@ std::vector<const Region *> RegionManager::query(const DimensionKey &dimension, 
     for (const auto index : indices) {
         result.push_back(&regions_[index]);
     }
+    if (const auto *global = find({dimension, std::string(global_region_name)});
+        global && global->kind == RegionKind::Global) {
+        result.push_back(global);
+    }
     std::ranges::sort(result, [](const Region *a, const Region *b) {
-        return a->priority != b->priority ? a->priority > b->priority : a->key.name < b->key.name;
+        return samePriority(*a, *b) ? a->key.name < b->key.name : higherPriority(*a, *b);
     });
     return result;
 }
@@ -93,12 +101,12 @@ bool RegionManager::isAllowed(const DimensionKey &dimension, const BlockPosition
                               std::string_view player_id, bool bypass) const
 {
     const auto matching = bypass ? std::vector<const Region *>{} : query(dimension, position);
-    return ProtectionPolicy::isAllowed(matching, flag, player_id, bypass);
+    return ProtectionPolicy::isAllowed(matching, flag, player_id, bypass, {regions_, parent_indices_});
 }
 
 bool RegionManager::isEnvironmentAllowed(const DimensionKey &dimension, const BlockPosition &position, Flag flag) const
 {
-    return ProtectionPolicy::isEnvironmentAllowed(query(dimension, position), flag);
+    return ProtectionPolicy::isEnvironmentAllowed(query(dimension, position), flag, {regions_, parent_indices_});
 }
 
 bool RegionManager::isTransitionAllowed(const DimensionKey &from_dimension, const BlockPosition &from,
@@ -108,7 +116,8 @@ bool RegionManager::isTransitionAllowed(const DimensionKey &from_dimension, cons
     if (bypass || (from_dimension == to_dimension && from == to)) {
         return true;
     }
-    return TransitionPolicy::isAllowed(query(from_dimension, from), query(to_dimension, to), player_id);
+    return TransitionPolicy::isAllowed(query(from_dimension, from), query(to_dimension, to), player_id,
+                                       {regions_, parent_indices_});
 }
 
 }

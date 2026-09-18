@@ -12,6 +12,11 @@ The candidate targets Windows x64, Endstone API 0.12 at SDK commit
 `46eff9f125f52eac76472d84339ead8fbf51fcd2`, and BDS 1.26.45.1 (protocol 2169).
 An API version match alone does not guarantee ABI compatibility; custom forks need their own build.
 
+The unreleased WG-1 work adds the [region-model foundation](docs/region-model.md): parent
+inheritance, dimension-global rules, templates, groups and a backed-up schema migration.
+Its new administration controls belong to a later phase; the command reference and public
+preview download below retain their existing scope.
+
 ## Build
 
 On Windows, install Git, Visual Studio 2022 C++ Build Tools, the C++ Clang tools component,

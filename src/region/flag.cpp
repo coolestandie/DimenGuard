@@ -46,6 +46,20 @@ constexpr std::array state_names{
     std::pair{FlagState::Allow, std::string_view{"allow"}},
     std::pair{FlagState::Deny, std::string_view{"deny"}},
 };
+constexpr std::array group_names{
+    std::pair{RegionGroup::All, std::string_view{"all"}},
+    std::pair{RegionGroup::Members, std::string_view{"members"}},
+    std::pair{RegionGroup::Owners, std::string_view{"owners"}},
+    std::pair{RegionGroup::NonMembers, std::string_view{"nonmembers"}},
+    std::pair{RegionGroup::NonOwners, std::string_view{"nonowners"}},
+};
+constexpr auto groups = [] {
+    std::array<RegionGroup, group_names.size()> values{};
+    for (std::size_t index = 0; index < values.size(); ++index) {
+        values[index] = group_names[index].first;
+    }
+    return values;
+}();
 constexpr auto flags = [] {
     std::array<Flag, definitions.size()> values{};
     for (std::size_t index = 0; index < values.size(); ++index) {
@@ -125,6 +139,28 @@ std::span<const FlagState> supportedFlagStates()
 std::optional<FlagState> parseState(std::string_view name)
 {
     for (const auto &[value, candidate] : state_names) {
+        if (candidate == name) {
+            return value;
+        }
+    }
+    return std::nullopt;
+}
+std::string_view regionGroupName(RegionGroup group)
+{
+    for (const auto &[value, name] : group_names) {
+        if (value == group) {
+            return name;
+        }
+    }
+    throw std::invalid_argument("Unknown region group");
+}
+std::span<const RegionGroup> supportedRegionGroups()
+{
+    return groups;
+}
+std::optional<RegionGroup> parseRegionGroup(std::string_view name)
+{
+    for (const auto &[value, candidate] : group_names) {
         if (candidate == name) {
             return value;
         }

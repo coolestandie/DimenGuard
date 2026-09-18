@@ -177,6 +177,43 @@ void measureAdministrativeSave(std::size_t count, const std::vector<Region> &reg
     }
 }
 
+void measureHierarchy(std::size_t count)
+{
+    constexpr auto template_count = maximum_region_depth - 1;
+    const auto plot_count = count - template_count;
+    auto regions = makeRegions(plot_count, Layout::Sparse);
+    for (auto &region : regions) {
+        region.flags.clear();
+        region.parent = "template-" + std::to_string(template_count - 1);
+    }
+    for (std::size_t index = 0; index < template_count; ++index) {
+        Region region;
+        region.key = {dimension, "template-" + std::to_string(index)};
+        region.kind = RegionKind::Template;
+        region.owner = index == 0 ? "ancestor-owner" : "template-owner";
+        if (index != 0) {
+            region.parent = "template-" + std::to_string(index - 1);
+        }
+        else {
+            region.flags[Flag::Pvp] = FlagState::Deny;
+            region.flag_groups[Flag::Pvp] = RegionGroup::NonMembers;
+        }
+        regions.push_back(std::move(region));
+    }
+    RegionManager manager;
+    manager.replaceAll(std::move(regions));
+    for (const auto flag : {Flag::Build, Flag::Pvp}) {
+        const auto name = flag == Flag::Build ? "deep_inherited_membership" : "deep_inherited_group";
+        measure(name, count, sparse_query_iterations, [&](std::size_t iteration) {
+            const auto origin = plotOrigin(iteration % plot_count);
+            if (!manager.isAllowed(dimension, {origin.x + 8, 64, origin.z + 8}, flag, "ancestor-owner")) {
+                throw std::runtime_error("A hierarchy benchmark rejected inherited ownership.");
+            }
+            return std::uint64_t{1};
+        });
+    }
+}
+
 }
 
 void run()
@@ -186,6 +223,7 @@ void run()
     for (const auto count : region_counts) {
         const auto sparse = makeRegions(count, Layout::Sparse);
         measureIndex(count, sparse);
+        measureHierarchy(count);
         measureAdministrativeSave(count, sparse, temporary.getPath());
     }
 }

@@ -14,6 +14,10 @@ inline void expectRegionEqual(const Region &actual, const Region &expected)
     EXPECT_EQ(actual.owner, expected.owner);
     EXPECT_EQ(actual.members, expected.members);
     EXPECT_EQ(actual.flags, expected.flags);
+    EXPECT_EQ(actual.kind, expected.kind);
+    EXPECT_EQ(actual.parent, expected.parent);
+    EXPECT_EQ(actual.passthrough, expected.passthrough);
+    EXPECT_EQ(actual.flag_groups, expected.flag_groups);
 }
 
 }

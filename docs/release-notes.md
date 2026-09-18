@@ -1,4 +1,21 @@
-# 0.2.0 preview candidate
+# Release notes
+
+## Unreleased: WG-1 region model
+
+- Add explicit cuboid, global and template kinds, bounded same-dimension parent hierarchies,
+  inherited ownership/membership, group-aware state rules and passthrough membership policy.
+- Retain the 26 existing flags, legacy defaults and event coverage. New model administration
+  controls are reserved for the command phase; existing game commands still create cuboids.
+- Keep parent links consistent during rename and reject deletion or priority changes that would
+  invalidate children. Mutations become live only after their snapshot commits.
+- Upgrade schema 1 to schema 2 with a consistent, non-overwriting SQLite backup, transactional
+  migration and graph validation. Old databases, including cuboids named `__global__`, keep their
+  original policy. Downgrading requires restoring the old binary and pre-migration backup.
+
+See [the model and migration contract](region-model.md) before testing this unreleased work.
+The published `0.2.0-rc1` package is unchanged; new model gameplay acceptance remains pending.
+
+## 0.2.0 preview candidate
 
 This is the first broad DimenGuard public-preview candidate. It is not a declaration of
 stable protection or complete WorldGuard compatibility. Gameplay and client acceptance are

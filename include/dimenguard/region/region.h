@@ -3,6 +3,7 @@
 #include "dimenguard/region/flag.h"
 
 #include <compare>
+#include <cstddef>
 #include <map>
 #include <optional>
 #include <span>
@@ -46,6 +47,18 @@ struct Bounds {
 
 [[nodiscard]] bool isValidRegionName(std::string_view name);
 
+enum class RegionKind {
+    Cuboid,
+    Global,
+    Template
+};
+
+inline constexpr std::string_view global_region_name = "__global__";
+inline constexpr std::size_t maximum_region_depth = 32;
+
+[[nodiscard]] std::string_view regionKindName(RegionKind kind);
+[[nodiscard]] std::optional<RegionKind> parseRegionKind(std::string_view name);
+
 struct Region {
     RegionKey key;
     Bounds bounds;
@@ -53,11 +66,19 @@ struct Region {
     std::string owner;
     std::unordered_set<std::string> members;
     std::map<Flag, FlagState> flags;
+    RegionKind kind = RegionKind::Cuboid;
+    std::optional<std::string> parent = std::nullopt;
+    FlagState passthrough = FlagState::Inherit;
+    std::map<Flag, RegionGroup> flag_groups = {};
 
     [[nodiscard]] bool isMember(std::string_view player_id) const;
 };
 
 /** Throws std::invalid_argument for invalid identities, bounds, names or flag values. */
 void validateRegion(const Region &region);
+void validateRegions(std::span<const Region> regions);
+
+[[nodiscard]] bool samePriority(const Region &a, const Region &b);
+[[nodiscard]] bool higherPriority(const Region &a, const Region &b);
 
 }

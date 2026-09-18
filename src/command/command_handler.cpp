@@ -16,6 +16,12 @@ Message serviceMessage(ServiceErrorCode code)
         return Message::InvalidName;
     case ServiceErrorCode::LimitReached:
         return Message::LimitReached;
+    case ServiceErrorCode::HasChildren:
+        return Message::RegionHasChildren;
+    case ServiceErrorCode::InvalidHierarchy:
+        return Message::InvalidHierarchy;
+    case ServiceErrorCode::InvalidRegionType:
+        return Message::InvalidRegionType;
     }
     return Message::Failed;
 }
